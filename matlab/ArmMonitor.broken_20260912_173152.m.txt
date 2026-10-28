@@ -1,0 +1,808 @@
+Created At: 2026-09-10T18:18:20+05:30
+Completed At: 2026-09-10T18:18:21+05:30
+File Path: `file:///D:/PRJ/Robstride/matlab/ArmMonitor.m`
+Total Lines: 1547
+Total Bytes: 68211
+Showing lines 1 to 800
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+classdef ArmMonitor < handle
+    % ArmMonitor - MATLAB live-data dashboard for 2-DOF Robstride Arm
+    % Uses base MATLAB R2020b+ uifigure and uigridlayout (no toolboxes needed)
+    
+    properties
+        arm           % ArmControl reference
+        fig           % uifigure handle
+        update_timer  % timer for UI refresh
+        
+        % Link lengths in mm
+        L1 = 400
+        L2 = 300
+        
+        % Top bar elements
+        lbl_title
+        btn_reconnect
+        btn_estop
+        
+        % Motor 1 UI elements
+        m1_panel
+        m1_pos_rad_lbl
+        m1_pos_deg_lbl
+        m1_vel_lbl
+        m1_cur_lbl
+        m1_volt_lbl
+        m1_temp_lbl
+        m1_fault_lbl
+        
+        % Motor 2 UI elements
+        m2_panel
+        m2_pos_rad_lbl
+        m2_pos_deg_lbl
+        m2_vel_lbl
+        m2_cur_lbl
+        m2_volt_lbl
+        m2_temp_lbl
+        m2_fault_lbl
+        
+        % Visualization UI elements
+        viz_panel
+        ax
+        h_workspace_circle
+        h_base_pivot
+        h_base_link
+        h_fore_link
+        h_elbow_joint
+        h_ee_joint
+        
+        % PID Panel UI elements
+        pid_panel
+        m1_kp_pos_field
+        m1_kp_vel_field
+        m1_ki_vel_field
+        m1_kd_vel_field
+        m2_kp_pos_field
+        m2_kp_vel_field
+        m2_ki_vel_field
+        m2_kd_vel_field
+        
+        % Limits & Safety UI elements
+        limits_panel
+        m1_pos_min_field
+        m1_pos_max_field
+        m1_vel_lim_field
+        m1_cur_lim_field
+        m1_tor_lim_field
+        m2_pos_min_field
+        m2_pos_max_field
+        m2_vel_lim_field
+        m2_cur_lim_field
+        m2_tor_lim_field
+        
+        % Live Oscilloscope UI elements and buffers
+        osc_panel
+        osc_ax
+        osc_lines
+        osc_dropdowns
+        osc_buffers = zeros(6, 200)
+        osc_buffer_idx = 1
+        
+        % Control Bar UI elements
+        ctrl_panel
+        unit_dropdown
+        lbl_m1
+        lbl_m2
+        m1_angle_field
+        m2_angle_field
+        m1_speed_field
+        m2_speed_field
+        btn_send_both
+        m1_jog_fwd
+        m1_jog_bwd
+        m2_jog_fwd
+        m2_jog_bwd
+        mode_dropdown
+    end
+    
+    methods
+        function obj = ArmMonitor(arm_obj)
+            % Constructor: stores arm reference, builds UI, starts 10Hz update timer
+            if nargin > 0
+                obj.arm = arm_obj;
+                if isprop(arm_obj, 'L1') && ~isempty(arm_obj.L1)
+                    obj.L1 = arm_obj.L1;
+                end
+                if isprop(arm_obj, 'L2') && ~isempty(arm_obj.L2)
+                    obj.L2 = arm_obj.L2;
+                end
+            end
+            
+            % Build UI layout
+            obj.build_ui();
+            
+            % Attach figure close callback
+            obj.fig.CloseRequestFcn = @(~,~) obj.close_cb();
+            
+            % Create and start 25Hz update timer
+            obj.update_timer = timer(...
+                'ExecutionMode', 'fixedSpacing', ...
+                'Period', 0.04, ...
+                'BusyMode', 'drop', ...
+                'TimerFcn', @(~,~) obj.update());
+            
+            start(obj.update_timer);
+        end
+        
+        function build_ui(obj)
+            % Construct 1460x850 uifigure and dark dashboard UI
+            screen_size = get(0, 'ScreenSize');
+            fig_w = 1460;
+            fig_h = min(850, max(700, screen_size(4) - 80));
+            fig_x = max(10, round((screen_size(3) - fig_w) / 2));
+            fig_y = max(10, round((screen_size(4) - fig_h) / 2));
+            
+            obj.fig = uifigure(...
+                'Name', 'Robstride Arm Monitor', ...
+                'Position', [fig_x, fig_y, fig_w, fig_h], ...
+                'Color', [0.08, 0.08, 0.10]);
+            
+            % Main layout: Top bar (65px) + Body (1x) + Live Oscilloscope (250px) + Control Bar (120px)
+            main_grid = uigridlayout(obj.fig, [4, 1]);
+            main_grid.RowHeight = {65, '1x', 250, 120};
+            main_grid.ColumnWidth = {'1x'};
+            main_grid.Padding = [12, 12, 12, 12];
+            main_grid.RowSpacing = 10;
+            
+            % --- TOP BAR ---
+            top_panel = uipanel(main_grid);
+            top_panel.Layout.Row = 1;
+            top_panel.Layout.Column = 1;
+            top_panel.BackgroundColor = [0.14, 0.14, 0.17];
+            top_panel.BorderType = 'none';
+            
+            top_grid = uigridlayout(top_panel, [1, 3]);
+            top_grid.ColumnWidth = {'1x', 140, 120};
+            top_grid.RowHeight = {50};
+            top_grid.Padding = [15, 7, 15, 7];
+            
+            obj.lbl_title = uilabel(top_grid);
+            obj.lbl_title.Layout.Row = 1;
+            obj.lbl_title.Layout.Column = 1;
+            obj.lbl_title.Text = 'ARM MONITOR';
+            obj.lbl_title.FontColor = [1.0, 1.0, 1.0];
+            obj.lbl_title.FontSize = 22;
+            obj.lbl_title.FontWeight = 'bold';
+            obj.lbl_title.VerticalAlignment = 'center';
+            
+            obj.btn_reconnect = uibutton(top_grid, 'push');
+            obj.btn_reconnect.Layout.Row = 1;
+            obj.btn_reconnect.Layout.Column = 2;
+            obj.btn_reconnect.Text = 'RE-ENABLE';
+            obj.btn_reconnect.BackgroundColor = [0.18, 0.55, 0.25];
+            obj.btn_reconnect.FontColor = [1.0, 1.0, 1.0];
+            obj.btn_reconnect.FontSize = 14;
+            obj.btn_reconnect.FontWeight = 'bold';
+            obj.btn_reconnect.ButtonPushedFcn = @(~,~) obj.reconnect();
+            
+            obj.btn_estop = uibutton(top_grid, 'push');
+            obj.btn_estop.Layout.Row = 1;
+            obj.btn_estop.Layout.Column = 3;
+            obj.btn_estop.Text = 'E-STOP';
+            obj.btn_estop.BackgroundColor = [0.85, 0.15, 0.15];
+            obj.btn_estop.FontColor = [1.0, 1.0, 1.0];
+            obj.btn_estop.FontSize = 16;
+            obj.btn_estop.FontWeight = 'bold';
+            obj.btn_estop.ButtonPushedFcn = @(~,~) obj.estop();
+            
+            % --- MAIN AREA (5 Columns) ---
+            body_grid = uigridlayout(main_grid, [1, 5]);
+            body_grid.Layout.Row = 2;
+            body_grid.Layout.Column = 1;
+            body_grid.ColumnWidth = {280, 280, '1x', 260, 260};
+            body_grid.RowHeight = {'1x'};
+            body_grid.Padding = [0, 0, 0, 0];
+            body_grid.ColumnSpacing = 12;
+            
+            % Column 1: Motor 1 / Base Panel
+            obj.m1_panel = uipanel(body_grid);
+            obj.m1_panel.Layout.Row = 1;
+            obj.m1_panel.Layout.Column = 1;
+            obj.m1_panel.Title = 'Motor 1 / Base';
+            obj.m1_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.m1_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.m1_panel.FontSize = 14;
+            obj.m1_panel.FontWeight = 'bold';
+            
+            % Column 2: Motor 2 / Fore Panel
+            obj.m2_panel = uipanel(body_grid);
+            obj.m2_panel.Layout.Row = 1;
+            obj.m2_panel.Layout.Column = 2;
+            obj.m2_panel.Title = 'Motor 2 / Fore';
+            obj.m2_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.m2_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.m2_panel.FontSize = 14;
+            obj.m2_panel.FontWeight = 'bold';
+            
+            % Build internal widgets for Motor 1 & Motor 2
+            obj.build_motor_widgets(1);
+            obj.build_motor_widgets(2);
+            
+            % Column 3: Arm Visualization Panel
+            obj.viz_panel = uipanel(body_grid);
+            obj.viz_panel.Layout.Row = 1;
+            obj.viz_panel.Layout.Column = 3;
+            obj.viz_panel.Title = 'Arm Visualization';
+            obj.viz_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.viz_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.viz_panel.FontSize = 14;
+            obj.viz_panel.FontWeight = 'bold';
+            
+            viz_grid = uigridlayout(obj.viz_panel, [1, 1]);
+            viz_grid.Padding = [10, 10, 10, 10];
+            
+            obj.ax = uiaxes(viz_grid);
+            obj.ax.Layout.Row = 1;
+            obj.ax.Layout.Column = 1;
+            obj.ax.Color = [0.10, 0.10, 0.10]; % Dark background (#1a1a1a)
+            obj.ax.XColor = [0.65, 0.65, 0.65];
+            obj.ax.YColor = [0.65, 0.65, 0.65];
+            obj.ax.GridColor = [0.35, 0.35, 0.35];
+            obj.ax.GridAlpha = 0.5;
+            title(obj.ax, 'Arm Visualization', 'Color', [1.0, 1.0, 1.0], 'FontSize', 13);
+            xlabel(obj.ax, 'X (mm)', 'Color', [0.8, 0.8, 0.8]);
+            ylabel(obj.ax, 'Y (mm)', 'Color', [0.8, 0.8, 0.8]);
+            grid(obj.ax, 'on');
+            hold(obj.ax, 'on');
+            
+            % Workspace boundary and limits
+            max_reach = obj.L1 + obj.L2;
+            lim = max_reach + 50;
+            obj.ax.XLim = [-lim, lim];
+            obj.ax.YLim = [-lim, lim];
+            axis(obj.ax, 'equal');
+            
+            % Dashed gray workspace circle (radius L1 + L2)
+            th_c = linspace(0, 2*pi, 200);
+            xc = max_reach * cos(th_c);
+            yc = max_reach * sin(th_c);
+            obj.h_workspace_circle = plot(obj.ax, xc, yc, '--', 'Color', [0.5, 0.5, 0.5], 'LineWidth', 1.2);
+            
+            % Base pivot circle (0,0)
+            obj.h_base_pivot = plot(obj.ax, 0, 0, 'o', ...
+                'MarkerFaceColor', [0.8, 0.8, 0.8], ...
+                'MarkerEdgeColor', [1.0, 1.0, 1.0], ...
+                'MarkerSize', 8);
+            
+            % Initialize arm links and joints
+            obj.h_base_link = plot(obj.ax, [0, obj.L1], [0, 0], '-', ...
+                'Color', [1.0, 1.0, 1.0], 'LineWidth', 4);
+            obj.h_fore_link = plot(obj.ax, [obj.L1, obj.L1 + obj.L2], [0, 0], '-', ...
+                'Color', [0.35, 0.75, 1.0], 'LineWidth', 4);
+            obj.h_elbow_joint = plot(obj.ax, obj.L1, 0, 'o', ...
+                'MarkerFaceColor', [0.2, 0.6, 1.0], ...
+                'MarkerEdgeColor', [1.0, 1.0, 1.0], ...
+                'MarkerSize', 8);
+            obj.h_ee_joint = plot(obj.ax, obj.L1 + obj.L2, 0, 'o', ...
+                'MarkerFaceColor', [1.0, 0.4, 0.2], ...
+                'MarkerEdgeColor', [1.0, 1.0, 1.0], ...
+                'MarkerSize', 9);
+            
+            % Initial zero-pose render
+            obj.redraw_arm(0, 0);
+            
+            % Column 4: PID Tuning Panel
+            obj.pid_panel = uipanel(body_grid);
+            obj.pid_panel.Layout.Row = 1;
+            obj.pid_panel.Layout.Column = 4;
+            obj.pid_panel.Title = 'PID Tuning';
+            obj.pid_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.pid_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.pid_panel.FontSize = 13;
+            obj.pid_panel.FontWeight = 'bold';
+            obj.build_pid_panel();
+
+            % Column 5: Limits & Safety Panel
+            obj.limits_panel = uipanel(body_grid);
+            obj.limits_panel.Layout.Row = 1;
+            obj.limits_panel.Layout.Column = 5;
+            obj.limits_panel.Title = 'Limits & Safety';
+            obj.limits_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.limits_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.limits_panel.FontSize = 13;
+            obj.limits_panel.FontWeight = 'bold';
+            obj.build_limits_panel();
+
+            % Row 3: Live Oscilloscope Panel
+            obj.osc_panel = uipanel(main_grid);
+            obj.osc_panel.Layout.Row = 3;
+            obj.osc_panel.Layout.Column = 1;
+            obj.osc_panel.Title = 'Live Oscilloscope';
+            obj.osc_panel.BackgroundColor = [0.13, 0.13, 0.16];
+            obj.osc_panel.ForegroundColor = [1.0, 1.0, 1.0];
+            obj.osc_panel.FontSize = 13;
+            obj.osc_panel.FontWeight = 'bold';
+            obj.build_oscilloscope();
+
+            % Row 4: Control Bar
+            obj.ctrl_panel = uipanel(main_grid);
+            obj.ctrl_panel.Layout.Row = 4;
+            obj.ctrl_panel.Layout.Column = 1;
+            obj.ctrl_panel.Title = '';
+            obj.ctrl_panel.BackgroundColor = [0.14, 0.14, 0.17];
+            obj.ctrl_panel.BorderType = 'none';
+            obj.build_control_bar();
+        end
+        
+        function update(obj)
+            % Called by 25 Hz timer: updates telemetry values, threshold colors, arm plot, and oscilloscope
+            try
+                if isempty(obj.fig) || ~isgraphics(obj.fig)
+                    return;
+                end
+                if isempty(obj.arm) || (~isprop(obj.arm, 'Telemetry') && ~isfield(obj.arm, 'Telemetry')) || isempty(obj.arm.Telemetry)
+                    return;
+                end
+                
+                telem = obj.arm.Telemetry;
+                th1 = 0;
+                th2 = 0;
+                
+                % Update Motor 1
+                if isfield(telem, 'm1') && ~isempty(telem.m1)
+                    m1 = telem.m1;
+                    if isfield(m1, 'position')
+                        th1 = m1.position;
+                        obj.m1_pos_rad_lbl.Text = sprintf('%.3f rad', th1);
+                        obj.m1_pos_deg_lbl.Text = sprintf('%.1f°', th1 * (180 / pi));
+                    end
+                    if isfield(m1, 'velocity')
+                        obj.m1_vel_lbl.Text = sprintf('%.2f rad/s', m1.velocity);
+                    end
+                    if isfield(m1, 'current')
+                        cur1 = m1.current;
+                        obj.m1_cur_lbl.Text = sprintf('%.2f A', cur1);
+                        if abs(cur1) > 4.5
+                            obj.m1_cur_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>4.5A)
+                        elseif abs(cur1) > 3.0
+                            obj.m1_cur_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>3.0A)
+                        else
+                            obj.m1_cur_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m1, 'voltage')
+                        obj.m1_volt_lbl.Text = sprintf('%.1f V', m1.voltage);
+                    end
+                    if isfield(m1, 'temperature')
+                        temp1 = m1.temperature;
+                        obj.m1_temp_lbl.Text = sprintf('%.1f °C', temp1);
+                        if temp1 > 80
+                            obj.m1_temp_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>80C)
+                        elseif temp1 > 60
+                            obj.m1_temp_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>60C)
+                        else
+                            obj.m1_temp_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m1, 'fault_str')
+                        fstr1 = string(m1.fault_str);
+                        obj.m1_fault_lbl.Text = char(fstr1);
+                        if ~strcmpi(strtrim(fstr1), "OK") && ~strcmpi(strtrim(fstr1), "None") && strlength(strtrim(fstr1)) > 0
+                            obj.m1_fault_lbl.BackgroundColor = [0.85, 0.15, 0.15]; % Red on fault
+                            obj.m1_fault_lbl.FontColor = [1.0, 1.0, 1.0];
+                        else
+                            obj.m1_fault_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+                            obj.m1_fault_lbl.FontColor = [0.4, 1.0, 0.4]; % Green on OK
+                        end
+                    end
+                end
+                
+                % Update Motor 2
+                if isfield(telem, 'm2') && ~isempty(telem.m2)
+                    m2 = telem.m2;
+                    if isfield(m2, 'position')
+                        th2 = m2.position;
+                        obj.m2_pos_rad_lbl.Text = sprintf('%.3f rad', th2);
+                        obj.m2_pos_deg_lbl.Text = sprintf('%.1f°', th2 * (180 / pi));
+                    end
+                    if isfield(m2, 'velocity')
+                        obj.m2_vel_lbl.Text = sprintf('%.2f rad/s', m2.velocity);
+                    end
+                    if isfield(m2, 'current')
+                        cur2 = m2.current;
+                        obj.m2_cur_lbl.Text = sprintf('%.2f A', cur2);
+                        if abs(cur2) > 4.5
+                            obj.m2_cur_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>4.5A)
+                        elseif abs(cur2) > 3.0
+                            obj.m2_cur_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>3.0A)
+                        else
+                            obj.m2_cur_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m2, 'voltage')
+                        obj.m2_volt_lbl.Text = sprintf('%.1f V', m2.voltage);
+                    end
+                    if isfield(m2, 'temperature')
+                        temp2 = m2.temperature;
+                        obj.m2_temp_lbl.Text = sprintf('%.1f °C', temp2);
+                        if temp2 > 80
+                            obj.m2_temp_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>80C)
+                        elseif temp2 > 60
+                            obj.m2_temp_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>60C)
+                        else
+                            obj.m2_temp_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m2, 'fault_str')
+                        fstr2 = string(m2.fault_str);
+                        obj.m2_fault_lbl.Text = char(fstr2);
+                        if ~strcmpi(strtrim(fstr2), "OK") && ~strcmpi(strtrim(fstr2), "None") && strlength(strtrim(fstr2)) > 0
+                            obj.m2_fault_lbl.BackgroundColor = [0.85, 0.15, 0.15]; % Red on fault
+                            obj.m2_fault_lbl.FontColor = [1.0, 1.0, 1.0];
+                        else
+                            obj.m2_fault_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+                            obj.m2_fault_lbl.FontColor = [0.4, 1.0, 0.4]; % Green on OK
+                        end
+                    end
+                end
+                
+                % Update Live Oscilloscope
+                obj.update_oscilloscope(telem);
+                
+                % Redraw arm visualization
+                obj.redraw_arm(th1, th2);
+                
+            catch
+                % Silently return on error
+                return;
+            end
+        end
+        
+        function estop(obj)
+            % Synchronous Emergency Stop: instantly disables both motors and alerts
+            try
+                if ~isempty(obj.arm)
+                    m1_id = 1;
+                    m2_id = 2;
+                    if isprop(obj.arm, 'MOTOR_1_ID') && ~isempty(obj.arm.MOTOR_1_ID)
+                        m1_id = obj.arm.MOTOR_1_ID;
+                    end
+                    if isprop(obj.arm, 'MOTOR_2_ID') && ~isempty(obj.arm.MOTOR_2_ID)
+                        m2_id = obj.arm.MOTOR_2_ID;
+                    end
+                    try
+                        obj.arm.disable_motor(m1_id);
+                    catch e1
+                        warning('ArmMonitor:estop_m1', 'Failed to disable M1: %s', e1.message);
+                    end
+                    try
+                        obj.arm.disable_motor(m2_id);
+                    catch e2
+                        warning('ArmMonitor:estop_m2', 'Failed to disable M2: %s', e2.message);
+                    end
+                end
+            catch e
+                warning('ArmMonitor:estop', 'Error executing E-STOP: %s', e.message);
+            end
+            
+            % Display warning dialog
+            try
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, 'EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP', 'Icon', 'error');
+                else
+                    errordlg('EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP');
+                end
+            catch
+                errordlg('EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP');
+            end
+        end
+        
+        function reconnect(obj)
+            % Reconnects / Re-enables motors after E-STOP or connection reset
+            try
+                if isempty(obj.arm)
+                    warning('ArmMonitor:reconnect', 'No ArmControl object attached.');
+                    return;
+                end
+                
+                % Re-open serial port if closed
+                if isempty(obj.arm.s) || ~isvalid(obj.arm.s)
+                    disp('Re-opening serial connection...');
+                    obj.arm.connect();
+                end
+                
+                m1_id = obj.arm.MOTOR_1_ID;
+                m2_id = obj.arm.MOTOR_2_ID;
+                
+                % Query selected control mode from UI
+                mode_str = 'Position';
+                if ~isempty(obj.mode_dropdown) && isvalid(obj.mode_dropdown)
+                    mode_str = obj.mode_dropdown.Value;
+                end
+                
+                % Re-configure and re-enable motors
+                for mid = [m1_id, m2_id]
+                    obj.arm.disable_timeout(mid);
+                    switch mode_str
+                        case 'Position', obj.arm.set_position_mode(mid);
+                        case 'Velocity', obj.arm.set_velocity_mode(mid);
+                        case 'Current',  obj.arm.set_current_mode(mid);
+                    end
+                    obj.arm.enable_motor(mid);
+                    obj.arm.set_current_limit(mid, 5.0);
+                    pause(0.05);
+                end
+                
+                % Restart telemetry polling timer
+                obj.arm.start_telemetry(20);
+                
+                fprintf('Motors re-enabled in %s mode and telemetry restarted.\n', mode_str);
+                
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, sprintf('Motors re-enabled in %s mode.\nTelemetry active.', mode_str), ...
+                            'Motors Re-enabled', 'Icon', 'success');
+                end
+            catch e
+                warning('ArmMonitor:reconnect', 'Reconnection failed: %s', e.message);
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, sprintf('Reconnection failed:\n%s', e.message), ...
+                            'Reconnection Error', 'Icon', 'error');
+                end
+            end
+        end
+        
+        function close_cb(obj)
+            % Close callback: stops timer, stops telemetry, and deletes figure
+            try
+                if ~isempty(obj.update_timer) && isvalid(obj.update_timer)
+                    stop(obj.update_timer);
+                    delete(obj.update_timer);
+                    obj.update_timer = [];
+                end
+            catch
+            end
+            
+            try
+                if ~isempty(obj.arm) && (ismethod(obj.arm, 'stop_telemetry') || isprop(obj.arm, 'stop_telemetry'))
+                    obj.arm.stop_telemetry();
+                end
+            catch
+            end
+            
+            try
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    delete(obj.fig);
+                end
+            catch
+            end
+        end
+        
+        function delete(obj)
+            % Handle destructor to guarantee timer cleanup
+            obj.close_cb();
+        end
+
+        function read_limits_to_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                % Read joint limits from obj.arm.JOINT_LIMITS
+                jl = [];
+                if isprop(obj.arm, 'JOINT_LIMITS') || isfield(obj.arm, 'JOINT_LIMITS')
+                    jl = obj.arm.JOINT_LIMITS;
+                end
+                if isstruct(jl)
+                    if is_m1
+                        if isfield(jl, 'm1_min'), obj.m1_pos_min_field.Value = jl.m1_min; end
+                        if isfield(jl, 'm1_max'), obj.m1_pos_max_field.Value = jl.m1_max; end
+                    else
+                        if isfield(jl, 'm2_min'), obj.m2_pos_min_field.Value = jl.m2_min; end
+                        if isfield(jl, 'm2_max'), obj.m2_pos_max_field.Value = jl.m2_max; end
+                    end
+                end
+
+                % Read velocity, current, and torque limits from motor
+                has_read_limits = ismethod(obj.arm, 'read_limits') || ...
+                    (isfield(obj.arm, 'read_limits') && isa(obj.arm.read_limits, 'function_handle'));
+                if has_read_limits
+                    limits = obj.arm.read_limits(motor_id);
+                    vel_val = NaN;
+                    cur_val = NaN;
+                    tor_val = NaN;
+                    if isstruct(limits)
+                        if isfield(limits, 'limit_spd') && ~isnan(limits.limit_spd)
+                            vel_val = limits.limit_spd;
+                        elseif isfield(limits, 'vel_lim') && ~isnan(limits.vel_lim)
+                            vel_val = limits.vel_lim;
+                        elseif isfield(limits, 'max_vel') && ~isnan(limits.max_vel)
+                            vel_val = limits.max_vel;
+                        end
+                        if isfield(limits, 'limit_cur') && ~isnan(limits.limit_cur)
+                            cur_val = limits.limit_cur;
+                        elseif isfield(limits, 'cur_lim') && ~isnan(limits.cur_lim)
+                            cur_val = limits.cur_lim;
+                        elseif isfield(limits, 'max_cur') && ~isnan(limits.max_cur)
+                            cur_val = limits.max_cur;
+                        end
+                        if isfield(limits, 'limit_torque') && ~isnan(limits.limit_torque)
+                            tor_val = limits.limit_torque;
+                        elseif isfield(limits, 'torque_lim') && ~isnan(limits.torque_lim)
+                            tor_val = limits.torque_lim;
+                        elseif isfield(limits, 'max_torque') && ~isnan(limits.max_torque)
+                            tor_val = limits.max_torque;
+                        end
+                    elseif isnumeric(limits) && length(limits) >= 3
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                        tor_val = limits(3);
+                    elseif isnumeric(limits) && length(limits) >= 2
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                    end
+
+                    if is_m1
+                        if ~isnan(vel_val), obj.m1_vel_lim_field.Value = vel_val; end
+                        if ~isnan(cur_val), obj.m1_cur_lim_field.Value = cur_val; end
+                        if ~isnan(tor_val), obj.m1_tor_lim_field.Value = tor_val; end
+                    else
+                        if ~isnan(vel_val), obj.m2_vel_lim_field.Value = vel_val; end
+                        if ~isnan(cur_val), obj.m2_cur_lim_field.Value = cur_val; end
+                        if ~isnan(tor_val), obj.m2_tor_lim_field.Value = tor_val; end
+                    end
+                end
+            catch e
+                warning('ArmMonitor:readLimits', 'Could not read limits: %s', e.message);
+            end
+        end
+
+        function write_limits_from_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                if is_m1
+                    min_val = obj.m1_pos_min_field.Value;
+                    max_val = obj.m1_pos_max_field.Value;
+                    vel_val = obj.m1_vel_lim_field.Value;
+                    cur_val = obj.m1_cur_lim_field.Value;
+                    tor_val = obj.m1_tor_lim_field.Value;
+                else
+                    min_val = obj.m2_pos_min_field.Value;
+                    max_val = obj.m2_pos_max_field.Value;
+                    vel_val = obj.m2_vel_lim_field.Value;
+                    cur_val = obj.m2_cur_lim_field.Value;
+                    tor_val = obj.m2_tor_lim_field.Value;
+                end
+
+                % Clamp safety limits
+                if min_val > max_val
+                    tmp = min_val;
+                    min_val = max_val;
+                    max_val = tmp;
+                end
+                vel_val = max(0, min(30, vel_val));
+                cur_val = max(0, min(12, cur_val));
+                tor_val = max(0, min(12, tor_val));
+
+                % Update UI fields with clamped values
+                if is_m1
+                    obj.m1_pos_min_field.Value = min_val;
+                    obj.m1_pos_max_field.Value = max_val;
+                    obj.m1_vel_lim_field.Value = vel_val;
+                    obj.m1_cur_lim_field.Value = cur_val;
+                    obj.m1_tor_lim_field.Value = tor_val;
+                else
+                    obj.m2_pos_min_field.Value = min_val;
+                    obj.m2_pos_max_field.Value = max_val;
+                    obj.m2_vel_lim_field.Value = vel_val;
+                    obj.m2_cur_lim_field.Value = cur_val;
+                    obj.m2_tor_lim_field.Value = tor_val;
+                end
+
+                obj.arm.set_joint_limits(motor_id, min_val, max_val);
+                obj.arm.set_velocity_limit(motor_id, vel_val);
+                obj.arm.set_current_limit(motor_id, cur_val);
+                obj.arm.set_torque_limit(motor_id, tor_val);
+                fprintf('Limits written to Motor %d.\n', motor_id);
+            catch e
+                warning('ArmMonitor:writeLimits', 'Could not write limits: %s', e.message);
+            end
+        end
+    end
+    
+    methods (Access = private)
+        function build_motor_widgets(obj, motor_idx)
+            % Helper to create vertical telemetry labels in motor panels
+            if motor_idx == 1
+                parent_panel = obj.m1_panel;
+            else
+                parent_panel = obj.m2_panel;
+            end
+            
+            grid = uigridlayout(parent_panel, [6, 3]);
+            grid.ColumnWidth = {95, '1x', '1x'};
+            grid.RowHeight = {40, 40, 40, 40, 40, 40};
+            grid.Padding = [12, 16, 12, 16];
+            grid.RowSpacing = 12;
+            grid.ColumnSpacing = 8;
+            
+            % Row 1: Position (rad + deg)
+            lbl_pos_title = uilabel(grid);
+            lbl_pos_title.Layout.Row = 1;
+            lbl_pos_title.Layout.Column = 1;
+            lbl_pos_title.Text = 'Position:';
+            lbl_pos_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_pos_title.FontSize = 13;
+            lbl_pos_title.FontWeight = 'bold';
+            lbl_pos_title.VerticalAlignment = 'center';
+            
+            pos_rad_lbl = uilabel(grid);
+            pos_rad_lbl.Layout.Row = 1;
+            pos_rad_lbl.Layout.Column = 2;
+            pos_rad_lbl.Text = '0.000 rad';
+            pos_rad_lbl.FontName = 'Courier New';
+            pos_rad_lbl.FontSize = 14;
+            pos_rad_lbl.FontColor = [1.0, 1.0, 1.0];
+            pos_rad_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            pos_rad_lbl.HorizontalAlignment = 'center';
+            pos_rad_lbl.VerticalAlignment = 'center';
+            
+            pos_deg_lbl = uilabel(grid);
+            pos_deg_lbl.Layout.Row = 1;
+            pos_deg_lbl.Layout.Column = 3;
+            pos_deg_lbl.Text = '0.0°';
+            pos_deg_lbl.FontName = 'Courier New';
+            pos_deg_lbl.FontSize = 14;
+            pos_deg_lbl.FontColor = [1.0, 1.0, 1.0];
+            pos_deg_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            pos_deg_lbl.HorizontalAlignment = 'center';
+            pos_deg_lbl.VerticalAlignment = 'center';
+            
+            % Row 2: Velocity
+            lbl_vel_title = uilabel(grid);
+            lbl_vel_title.Layout.Row = 2;
+            lbl_vel_title.Layout.Column = 1;
+            lbl_vel_title.Text = 'Velocity:';
+            lbl_vel_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_vel_title.FontSize = 13;
+            lbl_vel_title.FontWeight = 'bold';
+            lbl_vel_title.VerticalAlignment = 'center';
+            
+            vel_lbl = uilabel(grid);
+            vel_lbl.Layout.Row = 2;
+            vel_lbl.Layout.Column = [2, 3];
+            vel_lbl.Text = '0.00 rad/s';
+            vel_lbl.FontName = 'Courier New';
+            vel_lbl.FontSize = 14;
+            vel_lbl.FontColor = [1.0, 1.0, 1.0];
+            vel_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            vel_lbl.HorizontalAlignment = 'center';
+            vel_lbl.VerticalAlignment = 'center';
+            
+            % Row 3: Current
+            lbl_cur_title = uilabel(grid);
+            lbl_cur_title.Layout.Row = 3;
+            lbl_cur_title.Layout.Column = 1;
+            lbl_cur_title.Text = 'Current:';
+            lbl_cur_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_cur_title.FontSize = 13;
+            lbl_cur_title.FontWeight = 'bold';
+            lbl_cur_title.VerticalAlignment = 'center';
+            
+            cur_lbl = uilabel(grid);
+            cur_lbl.Layout.Row = 3;
+            cur_lbl.Layout.Column = [2, 3];
+            cur_lbl.Text = '0.00 A';
+            cur_lbl.FontName = 'Courier New';
+            cur_lbl.FontSize = 14;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

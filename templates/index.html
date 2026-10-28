@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KINETIQ // TORQUE LAB - 2-DoF Planar Arm Dynamic Sizer</title>
+<!-- Google Fonts: Space Grotesk, JetBrains Mono, Geist -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#1c2b3c",
+            "on-error-container": "#ffdad6",
+            "surface-container-highest": "#273647",
+            "inverse-on-surface": "#233143",
+            "surface-container-low": "#0d1c2d",
+            "surface-variant": "#273647",
+            "secondary-fixed-dim": "#ffba38",
+            "inverse-primary": "#006970",
+            "on-tertiary-fixed": "#00210b",
+            "inverse-surface": "#d4e4fa",
+            "surface-tint": "#00dbe9",
+            "on-background": "#d4e4fa",
+            "on-secondary-fixed": "#281900",
+            "on-primary-fixed-variant": "#004f54",
+            "outline": "#849495",
+            "on-secondary": "#432c00",
+            "primary-container": "#00f0ff",
+            "surface-container-lowest": "#010f1f",
+            "surface-bright": "#2c3a4c",
+            "primary": "#dbfcff",
+            "outline-variant": "#3b494b",
+            "on-tertiary-fixed-variant": "#005226",
+            "surface-container": "#122131",
+            "surface-dim": "#051424",
+            "on-primary-fixed": "#002022",
+            "on-tertiary-container": "#006e35",
+            "error": "#ffb4ab",
+            "secondary-fixed": "#ffdeac",
+            "on-primary": "#00363a",
+            "tertiary-fixed-dim": "#00e475",
+            "error-container": "#93000a",
+            "tertiary": "#dbffde",
+            "on-secondary-container": "#6a4800",
+            "surface": "#051424",
+            "primary-fixed-dim": "#00dbe9",
+            "on-error": "#690005",
+            "on-primary-container": "#006970",
+            "on-secondary-fixed-variant": "#604100",
+            "on-tertiary": "#003918",
+            "on-surface": "#d4e4fa",
+            "primary-fixed": "#7df4ff",
+            "background": "#051424",
+            "on-surface-variant": "#b9cacb",
+            "tertiary-fixed": "#62ff96",
+            "tertiary-container": "#34f885",
+            "secondary": "#ffd799",
+            "secondary-container": "#feb300"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "0.75rem",
+            "gutter-desktop": "1rem",
+            "space-xs": "0.25rem",
+            "space-xl": "1.5rem",
+            "margin-desktop": "1.25rem",
+            "gutter": "0.75rem",
+            "space-lg": "1rem",
+            "space-md": "0.75rem",
+            "space-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Space Grotesk"],
+            "headline-xl": ["Space Grotesk"],
+            "headline-lg": ["Space Grotesk"],
+            "title-sm": ["Geist"],
+            "metric-unit": ["JetBrains Mono"],
+            "label-code": ["JetBrains Mono"],
+            "body-sm": ["Geist"],
+            "metric-display": ["JetBrains Mono"],
+            "body-md": ["Geist"],
+            "hud-caption": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "headline-md": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+            "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+            "title-sm": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+            "metric-unit": ["10px", {"lineHeight": "12px", "letterSpacing": "0.06em", "fontWeight": "400"}],
+            "label-code": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+            "body-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0", "fontWeight": "400"}],
+            "metric-display": ["20px", {"lineHeight": "24px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "body-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0", "fontWeight": "400"}],
+            "hud-caption": ["10px", {"lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "600"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .cad-grid {
+      background-size: 80px 80px, 16px 16px;
+      background-image: 
+        linear-gradient(to right, rgba(37, 50, 66, 0.45) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 50, 66, 0.45) 1px, transparent 1px),
+        linear-gradient(to right, rgba(22, 32, 44, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(22, 32, 44, 0.3) 1px, transparent 1px);
+    }
+    /* Clean numeric input spinner styling */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      opacity: 0.6;
+      filter: invert(0.8);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-surface-container-lowest">
+<!-- MAIN VIEWPORT CONTAINER (Three Column Instrumentation Architecture) -->
+<main class="flex-1 flex flex-col xl:flex-row w-full overflow-hidden bg-background">
+<!-- LEFT COLUMN: Dynamic Parameter Inputs (Dense, Form-Controls) -->
+<aside class="w-full xl:w-[360px] 2xl:w-[400px] border-r border-outline-variant bg-surface-container-low flex flex-col shrink-0 overflow-y-auto max-h-[calc(100vh-2.5rem)]">
+<!-- Section Header -->
+<div class="px-space-md py-2 bg-surface-container border-b border-outline-variant flex items-center justify-between sticky top-0 z-20">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-container text-[16px]">tune</span>
+<span class="text-label-code font-label-code text-on-surface font-semibold tracking-wider uppercase">DYNAMIC PARAMETER MATRIX</span>
+</div>
+<span class="text-hud-caption font-hud-caption px-1.5 py-0.5 bg-surface-container-highest border border-outline-variant text-primary-container">REALTIME SOLVER</span>
+</div>
+<div class="p-space-md space-y-space-md">
+<!-- Physical Geometry Block -->
+<div class="bg-surface-container p-space-sm border border-outline-variant rounded-[2px]">
+<div class="flex items-center justify-between pb-1 mb-2 border-b border-outline-variant/60">
+<span class="text-hud-caption font-hud-caption text-primary-container tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">straighten</span> 01 // PHYSICAL GEOMETRY
+            </span>
+<span class="text-metric-unit font-metric-unit text-on-surface-variant">PLANAR SCARA</span>
+</div>
+<!-- L1 -->
+<div class="mb-2">
+<div class="flex justify-between items-center text-label-code font-label-code mb-1">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-[#ff3366] rounded-full"></span> Base Link Length (L1)
+</span>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-[2px] px-2 py-1 focus-within:border-primary-container">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-on-surface font-semibold focus:ring-0 focus:outline-none" id="input_l1" max="2.5" min="0.1" step="0.01" type="number" value="0.65"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">m</span>
+</div>
+</div>
+<!-- L2 -->
+<div class="mb-2">
+<div class="flex justify-between items-center text-label-code font-label-code mb-1">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-[#00e676] rounded-full"></span> Fore Link Length (L2)
+</span>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-[2px] px-2 py-1 focus-within:border-primary-container">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-on-surface font-semibold focus:ring-0 focus:outline-none" id="input_l2" max="2.0" min="0.1" step="0.01" type="number" value="0.45"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">m</span>
+</div>
+</div>
+<!-- θ1 and θ2 Joint Angles in a 2-col mini layout -->
+<div class="grid grid-cols-2 gap-2 pt-1">
+<div class="bg-surface-container-lowest p-1.5 border border-outline-variant/60 rounded-[2px] focus-within:border-primary-container">
+<div class="flex justify-between items-center text-hud-caption font-hud-caption text-on-surface-variant mb-1">
+<span>Joint Angle 1 (theta1)</span>
+<span class="text-primary-container font-mono text-[10px]">[-180°, 180°]</span>
+</div>
+<div class="flex items-center">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-primary-container font-semibold focus:ring-0 focus:outline-none" id="input_t1" max="180" min="-180" step="1" type="number" value="35"/>
+<span class="text-metric-unit font-metric-unit text-primary-container ml-1">°</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-1.5 border border-outline-variant/60 rounded-[2px] focus-within:border-secondary-container">
+<div class="flex justify-between items-center text-hud-caption font-hud-caption text-on-surface-variant mb-1">
+<span>Joint Angle 2 (theta2)</span>
+<span class="text-secondary-fixed-dim font-mono text-[10px]">[-180°, 180°]</span>
+</div>
+<div class="flex items-center">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-secondary-fixed-dim font-semibold focus:ring-0 focus:outline-none" id="input_t2" max="180" min="-180" step="1" type="number" value="45"/>
+<span class="text-metric-unit font-metric-unit text-secondary-fixed-dim ml-1">°</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Mass Distribution Block -->
+<div class="bg-surface-container p-space-sm border border-outline-variant rounded-[2px]">
+<div class="flex items-center justify-between pb-1 mb-2 border-b border-outline-variant/60">
+<span class="text-hud-caption font-hud-caption text-primary-container tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">weight</span> 02 // MASS DISTRIBUTION
+            </span>
+<span class="text-metric-unit font-metric-unit text-on-surface-variant" id="stat_mass_header">TOTAL: 12.65 kg</span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-label-code font-label-code">
+<!-- Link 1 Mass -->
+<div class="bg-surface-container-lowest p-1.5 border border-outline-variant/50 rounded-[2px] focus-within:border-primary-container">
+<div class="flex justify-between text-hud-caption font-hud-caption text-on-surface-variant mb-0.5">
+<span>BASE LINK (m1)</span>
+</div>
+<div class="flex justify-between items-baseline">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-on-surface font-semibold focus:ring-0 focus:outline-none" id="input_m1" min="0" step="0.1" type="number" value="4.80"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">kg</span>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-0.5">r1_cg: <span class="text-outline">0.32 m</span></div>
+</div>
+<!-- Link 2 Mass -->
+<div class="bg-surface-container-lowest p-1.5 border border-outline-variant/50 rounded-[2px] focus-within:border-primary-container">
+<div class="flex justify-between text-hud-caption font-hud-caption text-on-surface-variant mb-0.5">
+<span>FORE LINK (m2)</span>
+</div>
+<div class="flex justify-between items-baseline">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-on-surface font-semibold focus:ring-0 focus:outline-none" id="input_m2" min="0" step="0.1" type="number" value="2.90"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">kg</span>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-0.5">r2_cg: <span class="text-outline">0.22 m</span></div>
+</div>
+<!-- Motor at Elbow -->
+<div class="bg-surface-container-lowest p-1.5 border border-outline-variant/50 rounded-[2px] focus-within:border-primary-container">
+<div class="flex justify-between text-hud-caption font-hud-caption text-on-surface-variant mb-0.5">
+<span>MOTOR J2 (m_motor)</span>
+</div>
+<div class="flex justify-between items-baseline">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-on-surface font-semibold focus:ring-0 focus:outline-none" id="input_mmotor" min="0" step="0.05" type="number" value="1.45"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">kg</span>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-0.5">At Elbow Pivot</div>
+</div>
+<!-- Payload Weight -->
+<div class="bg-surface-container-lowest p-1.5 border border-secondary-container/40 rounded-[2px] focus-within:border-secondary-container">
+<div class="flex justify-between text-hud-caption font-hud-caption text-secondary-fixed-dim mb-0.5">
+<span>PAYLOAD (m_load)</span>
+</div>
+<div class="flex justify-between items-baseline">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-secondary-fixed-dim font-bold focus:ring-0 focus:outline-none" id="input_mload" min="0" step="0.25" type="number" value="3.50"/>
+<span class="text-metric-unit font-metric-unit text-secondary-container ml-1">kg</span>
+</div>
+<div class="text-[10px] text-secondary-fixed-dim/70 mt-0.5">End-Effector Gripper</div>
+</div>
+</div>
+</div>
+<!-- HIGHLIGHTED: Dynamic Accelerations & Velocities -->
+<div class="bg-surface-container p-space-sm border-2 border-primary-container/40 rounded-[2px] shadow-[0_0_12px_rgba(0,240,255,0.08)]">
+<div class="flex items-center justify-between pb-1 mb-2 border-b border-primary-container/30">
+<span class="text-hud-caption font-hud-caption text-primary-container tracking-wider flex items-center gap-1 font-bold">
+<span class="material-symbols-outlined text-[14px] text-primary-container animate-pulse">electric_bolt</span> 03 // DYNAMIC ACCELERATIONS
+            </span>
+<span class="text-metric-unit font-metric-unit text-primary-container bg-surface-container-highest px-1 py-0.5 rounded-[1px]">KINEMATIC INERTIAL</span>
+</div>
+<div class="space-y-2 text-label-code font-label-code">
+<!-- Base Angular Accel α1 -->
+<div>
+<div class="flex justify-between items-center mb-0.5">
+<span class="text-on-surface-variant">Base Ang Accel (α1)</span>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-[2px] px-2 py-1 focus-within:border-primary-container">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-primary-container font-semibold focus:ring-0 focus:outline-none" id="input_a1" max="100.0" min="0.0" step="0.5" type="number" value="12.5"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">rad/s²</span>
+</div>
+</div>
+<!-- Elbow Angular Accel α2 -->
+<div>
+<div class="flex justify-between items-center mb-0.5">
+<span class="text-on-surface-variant">Elbow Ang Accel (α2)</span>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-[2px] px-2 py-1 focus-within:border-primary-container">
+<input class="w-full bg-transparent border-0 p-0 text-label-code font-mono text-primary-container font-semibold focus:ring-0 focus:outline-none" id="input_a2" max="100.0" min="0.0" step="0.5" type="number" value="18.0"/>
+<span class="text-metric-unit font-metric-unit text-outline ml-1">rad/s²</span>
+</div>
+</div>
+</div>
+</div>
+
+</aside>
+<!-- CENTER COLUMN: High-Fidelity 2-Link Robotic Arm Schematic & Viewport -->
+<section class="flex-1 flex flex-col min-w-0 bg-surface border-r border-outline-variant">
+
+<!-- Blueprint / CAD Schematic Canvas -->
+<div class="flex-1 relative cad-grid bg-[#090D12] overflow-hidden flex items-center justify-center p-4 select-none">
+<!-- Crosshair Registration Markers at Corners -->
+<div class="absolute top-2 left-2 text-outline text-label-code select-none font-mono">+ 0,0</div>
+<div class="absolute top-2 right-2 text-outline text-label-code select-none font-mono">+ 1.5,0</div>
+<div class="absolute bottom-2 left-2 text-outline text-label-code select-none font-mono">+ 0,-1.0</div>
+<div class="absolute bottom-2 right-2 text-outline text-label-code select-none font-mono">+ 1.5,-1.0</div>
+
+<!-- SVG DYNAMIC ROBOTIC ARM SCHEMATIC -->
+<svg class="w-full h-full max-h-[560px] drop-shadow-2xl" id="arm_canvas" viewBox="0 0 800 520">
+<defs>
+<!-- Arrow Markers -->
+<marker id="arrow-cyan" markerHeight="6" markerWidth="6" orient="auto-start-reverse" refX="5" refY="5" viewBox="0 0 10 10">
+<path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff"></path>
+</marker>
+<marker id="arrow-amber" markerHeight="6" markerWidth="6" orient="auto-start-reverse" refX="5" refY="5" viewBox="0 0 10 10">
+<path d="M 0 0 L 10 5 L 0 10 z" fill="#feb300"></path>
+</marker>
+<marker id="arrow-red" markerHeight="6" markerWidth="6" orient="auto-start-reverse" refX="5" refY="5" viewBox="0 0 10 10">
+<path d="M 0 0 L 10 5 L 0 10 z" fill="#ff3366"></path>
+</marker>
+</defs>
+
+<!-- Origin Baseline & Reference Axes (Base at 400, 100) -->
+<line stroke="#253242" stroke-dasharray="4 4" stroke-width="1.5" x1="80" x2="720" y1="100" y2="100"></line>
+<line stroke="#253242" stroke-dasharray="4 4" stroke-width="1.5" x1="400" x2="400" y1="30" y2="490"></line>
+<text fill="#64748b" font-family="JetBrains Mono" font-size="7" x="715" y="95">+X (m)</text>
+<text fill="#64748b" font-family="JetBrains Mono" font-size="7" x="80" y="95">-X (+θ CW)</text>
+<text fill="#64748b" font-family="JetBrains Mono" font-size="7" x="408" y="485">+Y (θ=0° DOWN)</text>
+
+<!-- Arm Base Joint Rig (Fixed Mounting Structure at (400, 100)) -->
+<g id="base_rig">
+<path d="M 350 48 L 400 100 L 450 48 Z" fill="#0d1c2d" stroke="#3b494b" stroke-width="2"></path>
+<rect fill="#1c2b3c" height="8" stroke="#3b494b" stroke-width="1.5" width="120" x="340" y="40"></rect>
+<line stroke="#253242" stroke-width="1.5" x1="350" x2="360" y1="40" y2="32"></line>
+<line stroke="#253242" stroke-width="1.5" x1="370" x2="380" y1="40" y2="32"></line>
+<line stroke="#253242" stroke-width="1.5" x1="390" x2="400" y1="40" y2="32"></line>
+<line stroke="#253242" stroke-width="1.5" x1="410" x2="420" y1="40" y2="32"></line>
+<line stroke="#253242" stroke-width="1.5" x1="430" x2="440" y1="40" y2="32"></line>
+<!-- Base Hub J1 centered at (400, 100) -->
+<circle cx="400" cy="100" fill="#141B24" r="26" stroke="#00f0ff" stroke-width="2.5"></circle>
+<circle cx="400" cy="100" fill="#010f1f" r="13" stroke="#3b494b" stroke-width="1.5"></circle>
+<circle cx="400" cy="100" fill="#00f0ff" r="4"></circle>
+<text fill="#00f0ff" font-family="JetBrains Mono" font-size="8" font-weight="600" id="svg_tau1" x="435" y="85">τ1 = 142.6 N·m</text>
+<text fill="#849495" font-family="JetBrains Mono" font-size="7" x="345" y="115">J1 (θ1)</text>
+</g>
+
+<!-- DYNAMIC ARM ASSEMBLY -->
+<g id="arm_geometry">
+<!-- LINK 1 -->
+<g id="link_1">
+<line class="link1-line" id="link1_glow" opacity="0.15" stroke="#00f0ff" stroke-linecap="round" stroke-width="14" x1="400" x2="325" y1="100" y2="206"></line>
+<line class="link1-line" id="link1_body" stroke="#1c2b3c" stroke-linecap="round" stroke-width="10" x1="400" x2="325" y1="100" y2="206"></line>
+<line class="link1-line" id="link1_accent" stroke="#00f0ff" stroke-dasharray="8 4" stroke-width="2" x1="400" x2="325" y1="100" y2="206"></line>
+<!-- L1 Dimension Tag -->
+<text fill="#d4e4fa" font-family="JetBrains Mono" font-size="7" id="svg_l1_label" text-anchor="middle" x="350" y="145">L1 = 0.65m</text>
+<!-- Link 1 CoM -->
+<circle cx="362" cy="153" fill="#ff3366" id="com1_circle" r="6" stroke="#ffffff" stroke-width="1.5"></circle>
+<line id="com1_arrow" marker-end="url(#arrow-red)" stroke="#ff3366" stroke-width="2" x1="362" x2="362" y1="153" y2="188"></line>
+<text fill="#ff3366" font-family="JetBrains Mono" font-size="7" font-weight="600" id="com1_text" x="372" y="180">m1·g (47.1N)</text>
+</g>
+
+<!-- ELBOW JOINT (J2) ASSEMBLY -->
+<g id="elbow_joint">
+<rect fill="#122131" height="32" id="elbow_canister" rx="2" stroke="#3b494b" stroke-width="2" width="32" x="309" y="190"></rect>
+<circle class="elbow-circle" cx="325" cy="206" fill="#1c2b3c" id="elbow_circle_outer" r="16" stroke="#feb300" stroke-width="2"></circle>
+<circle class="elbow-circle" cx="325" cy="206" fill="#010f1f" id="elbow_circle_inner" r="5" stroke="#feb300" stroke-width="1"></circle>
+<text fill="#feb300" font-family="JetBrains Mono" font-size="8" font-weight="600" id="svg_tau2" x="345" y="195">τ2 = 58.2 N·m</text>
+<text fill="#849495" font-family="JetBrains Mono" font-size="7" id="elbow_label" x="345" y="215">J2 (θ2)</text>
+</g>
+
+<!-- LINK 2 -->
+<g id="link_2">
+<line class="link2-line" id="link2_glow" opacity="0.15" stroke="#00e676" stroke-linecap="round" stroke-width="12" x1="325" x2="237" y1="206" y2="222"></line>
+<line class="link2-line" id="link2_body" stroke="#1c2b3c" stroke-linecap="round" stroke-width="8" x1="325" x2="237" y1="206" y2="222"></line>
+<line class="link2-line" id="link2_accent" stroke="#00e676" stroke-dasharray="6 3" stroke-width="2" x1="325" x2="237" y1="206" y2="222"></line>
+<!-- L2 Dimension Tag -->
+<text fill="#d4e4fa" font-family="JetBrains Mono" font-size="7" id="svg_l2_label" text-anchor="middle" x="270" y="206">L2 = 0.45m</text>
+<!-- Link 2 CoM -->
+<circle cx="281" cy="214" fill="#00e676" id="com2_circle" r="5" stroke="#ffffff" stroke-width="1.5"></circle>
+<line id="com2_arrow" marker-end="url(#arrow-cyan)" stroke="#00e676" stroke-width="1.5" x1="281" x2="281" y1="214" y2="246"></line>
+<text fill="#00e676" font-family="JetBrains Mono" font-size="7" id="com2_text" x="290" y="242">m2·g (28.5N)</text>
+</g>
+
+<!-- END EFFECTOR & PAYLOAD MASS BLOCK -->
+<g id="end_effector">
+<!-- End Effector Circles -->
+<circle class="ee-circle" cx="237" cy="222" fill="#00f0ff" id="ee_circle_outer" r="9" stroke="#ffffff" stroke-width="1.5"></circle>
+<circle class="ee-circle" cx="237" cy="222" fill="#051424" id="ee_circle_inner" r="3"></circle>
+<!-- Payload Box -->
+<rect fill="#281900" height="24" id="payload_box" rx="2" stroke="#feb300" stroke-width="1.5" width="34" x="220" y="232"></rect>
+<text fill="#ffd799" font-family="JetBrains Mono" font-size="7" font-weight="700" id="svg_payload_label" text-anchor="middle" x="237" y="248">3.50 kg</text>
+<!-- Payload Force Arrow -->
+<line id="ee_force_arrow" marker-end="url(#arrow-amber)" stroke="#feb300" stroke-width="2" x1="237" x2="237" y1="256" y2="288"></line>
+<text fill="#feb300" font-family="JetBrains Mono" font-size="7" font-weight="700" id="ee_force_text" x="246" y="280">F_load (34.3 N)</text>
+<!-- TCP Callout -->
+<rect fill="#010f1f" height="22" id="tcp_badge_bg" rx="1" stroke="#00f0ff" stroke-width="1" width="130" x="245" y="206"></rect>
+<text fill="#00f0ff" font-family="JetBrains Mono" font-size="7" font-weight="600" id="svg_tcp_text" x="252" y="221">TCP: [0.782, 0.412]</text>
+</g>
+</g>
+</svg>
+</div>
+
+</section>
+<!-- RIGHT COLUMN: Calculated Torque Outputs & Motor Sizing Analysis -->
+<aside class="w-full xl:w-[380px] 2xl:w-[420px] bg-surface-container-low flex flex-col shrink-0 overflow-y-auto max-h-[calc(100vh-2.5rem)]">
+<!-- Section Header -->
+<div class="px-space-md py-2 bg-surface-container border-b border-outline-variant flex items-center justify-between sticky top-0 z-20">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary-container text-[16px]">electric_meter</span>
+<span class="text-label-code font-label-code text-on-surface font-semibold tracking-wider uppercase">DYNAMIC TORQUE &amp; SIZING</span>
+</div>
+<span class="text-hud-caption font-hud-caption px-1.5 py-0.5 bg-secondary-container/20 text-secondary-fixed-dim border border-secondary-container/50">EULER-LAGRANGE</span>
+</div>
+<div class="p-space-md space-y-space-md">
+<!-- PRIMARY HERO METRIC: JOINT 1 (BASE) -->
+<div class="bg-surface-container p-space-sm border border-outline-variant rounded-[2px] relative overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-primary-container/5 rounded-bl-full pointer-events-none"></div>
+<div class="flex items-center justify-between pb-1 mb-2 border-b border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 bg-primary-container rounded-full animate-ping"></span>
+<span class="text-title-sm font-headline-md font-bold text-on-surface">JOINT 1 // BASE MOTOR (J1)</span>
+</div>
+<span class="text-hud-caption font-hud-caption text-primary-container">HEAVIEST AXIS</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-2">
+<!-- Peak Torque -->
+<div class="bg-surface-container-lowest p-2 border border-primary-container/30 rounded-[1px]">
+<div class="text-hud-caption font-hud-caption text-on-surface-variant flex items-center justify-between">
+<span>PEAK TORQUE (τ1_pk)</span>
+</div>
+<div class="flex items-baseline gap-1 my-0.5">
+<span class="text-headline-lg font-metric-display text-primary-container font-bold" id="val_torque_j1">142.6</span>
+<span class="text-metric-unit font-metric-unit text-outline">N·m</span>
+</div>
+<span class="text-[10px] text-primary-container/80 bg-primary-container/10 px-1 py-0.2 rounded-[1px] inline-block font-mono">
+                Accel + Gravity Peak
+              </span>
+</div>
+<!-- Continuous / RMS Torque -->
+<div class="bg-surface-container-lowest p-2 border border-outline-variant/60 rounded-[1px]">
+<div class="text-hud-caption font-hud-caption text-on-surface-variant flex items-center justify-between">
+<span>CONTINUOUS (RMS)</span>
+</div>
+<div class="flex items-baseline gap-1 my-0.5">
+<span class="text-headline-lg font-metric-display text-on-surface font-semibold" id="val_cont_torque_j1">68.4</span>
+<span class="text-metric-unit font-metric-unit text-outline">N·m</span>
+</div>
+<span class="text-[10px] text-on-surface-variant bg-surface-container-highest px-1 py-0.2 rounded-[1px] inline-block font-mono">
+                Thermal Holding Safe
+              </span>
+</div>
+</div>
+</div>
+</div>
+<!-- PRIMARY HERO METRIC: JOINT 2 (ELBOW) -->
+<div class="bg-surface-container p-space-sm border border-outline-variant rounded-[2px] relative overflow-hidden">
+<div class="flex items-center justify-between pb-1 mb-2 border-b border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 bg-secondary-container rounded-full"></span>
+<span class="text-title-sm font-headline-md font-bold text-on-surface">JOINT 2 // ELBOW MOTOR (J2)</span>
+</div>
+<span class="text-hud-caption font-hud-caption text-secondary-fixed-dim">PAYLOAD AXIS</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-2">
+<!-- Peak Torque J2 -->
+<div class="bg-surface-container-lowest p-2 border border-secondary-container/30 rounded-[1px]">
+<div class="text-hud-caption font-hud-caption text-on-surface-variant flex items-center justify-between">
+<span>PEAK TORQUE (τ2_pk)</span>
+</div>
+<div class="flex items-baseline gap-1 my-0.5">
+<span class="text-headline-lg font-metric-display text-secondary-container font-bold" id="val_torque_j2">58.2</span>
+<span class="text-metric-unit font-metric-unit text-outline">N·m</span>
+</div>
+<span class="text-[10px] text-secondary-fixed-dim bg-secondary-container/10 px-1 py-0.2 rounded-[1px] inline-block font-mono">
+                Dynamic Worst-Case
+              </span>
+</div>
+<!-- Continuous / RMS Torque J2 -->
+<div class="bg-surface-container-lowest p-2 border border-outline-variant/60 rounded-[1px]">
+<div class="text-hud-caption font-hud-caption text-on-surface-variant flex items-center justify-between">
+<span>CONTINUOUS (RMS)</span>
+</div>
+<div class="flex items-baseline gap-1 my-0.5">
+<span class="text-headline-lg font-metric-display text-on-surface font-semibold" id="val_cont_torque_j2">26.8</span>
+<span class="text-metric-unit font-metric-unit text-outline">N·m</span>
+</div>
+<span class="text-[10px] text-on-surface-variant bg-surface-container-highest px-1 py-0.2 rounded-[1px] inline-block font-mono">
+                Holding Load Safe
+              </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Interactive JavaScript for Live Slider Scrubbing & Presets -->
+<script>
+    
+    // Zooming for SVG Canvas
+    const svgCanvas = document.getElementById('arm_canvas');
+    let viewBox = {x: 0, y: 0, w: 800, h: 520};
+    
+    if (svgCanvas) {
+      svgCanvas.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        const zoomIntensity = 0.1;
+        const wheel = e.deltaY < 0 ? 1 : -1;
+        const zoom = Math.exp(wheel * zoomIntensity);
+        
+        const rect = svgCanvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const svgMouseX = viewBox.x + (mouseX / rect.width) * viewBox.w;
+        const svgMouseY = viewBox.y + (mouseY / rect.height) * viewBox.h;
+
+        viewBox.w /= zoom;
+        viewBox.h /= zoom;
+
+        viewBox.x = svgMouseX - (mouseX / rect.width) * viewBox.w;
+        viewBox.y = svgMouseY - (mouseY / rect.height) * viewBox.h;
+
+        svgCanvas.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+      }, { passive: false });
+    }
+
+    // Elements
+    const inputL1 = document.getElementById('input_l1');
+    const inputL2 = document.getElementById('input_l2');
+    const inputT1 = document.getElementById('input_t1');
+    const inputT2 = document.getElementById('input_t2');
+    const inputM1 = document.getElementById('input_m1');
+    const inputM2 = document.getElementById('input_m2');
+    const inputMmotor = document.getElementById('input_mmotor');
+    const inputMload = document.getElementById('input_mload');
+    const inputA1 = document.getElementById('input_a1');
+    const inputA2 = document.getElementById('input_a2');
+
+    const valL1 = document.getElementById('val_l1');
+    const valL2 = document.getElementById('val_l2');
+    const valT1 = document.getElementById('val_t1');
+    const valT2 = document.getElementById('val_t2');
+    const valA1 = document.getElementById('val_a1');
+    const valA2 = document.getElementById('val_a2');
+
+    const statX = document.getElementById('stat_x');
+    const statY = document.getElementById('stat_y');
+    const valTorqueJ1 = document.getElementById('val_torque_j1');
+    const valTorqueJ2 = document.getElementById('val_torque_j2');
+    const valContTorqueJ1 = document.getElementById('val_cont_torque_j1');
+    const valContTorqueJ2 = document.getElementById('val_cont_torque_j2');
+
+    let gravityActive = true;
+    let fetchDebounceTimer = null;
+
+    const BaseX = 400;
+    const BaseY = 100;
+    const SCALE = 200; // 1m = 200px
+
+    // Update Local Visual Badges, Dynamic SVG Arm Schematic, and Kinematics
+    function updateLocalKinematics() {
+      const l1 = parseFloat(inputL1?.value) || 0.65;
+      const l2 = parseFloat(inputL2?.value) || 0.45;
+      const theta1 = parseFloat(inputT1?.value) || 0;
+      const theta2 = parseFloat(inputT2?.value) || 0;
+      const a1 = parseFloat(inputA1?.value) || 0;
+      const a2 = parseFloat(inputA2?.value) || 0;
+      const m1 = parseFloat(inputM1?.value) || 4.80;
+      const m2 = parseFloat(inputM2?.value) || 2.90;
+      const mload = parseFloat(inputMload?.value) || 3.50;
+
+      if (valL1) valL1.innerText = l1.toFixed(2);
+      if (valL2) valL2.innerText = l2.toFixed(2);
+      if (valT1) valT1.innerText = Math.round(theta1);
+      if (valT2) valT2.innerText = Math.round(theta2);
+      if (valA1) valA1.innerText = a1.toFixed(1);
+      if (valA2) valA2.innerText = a2.toFixed(1);
+
+      // Trigonometry conversion
+      // 0 degrees = Links pointing STRAIGHT DOWN (+Y direction)
+      // Positive angle = CW rotation (moves towards -X)
+      const t1Rad = (theta1 * Math.PI) / 180;
+      const t12Rad = ((theta1 + theta2) * Math.PI) / 180;
+
+      const L1_px = l1 * SCALE;
+      const L2_px = l2 * SCALE;
+
+      // Elbow SVG coords: cx = BaseX - L1_px * sin(theta1), cy = BaseY + L1_px * cos(theta1)
+      const cx = BaseX - L1_px * Math.sin(t1Rad);
+      const cy = BaseY + L1_px * Math.cos(t1Rad);
+
+      // End SVG coords: ex = cx - L2_px * sin(theta1+theta2), ey = cy + L2_px * cos(theta1+theta2)
+      const ex = cx - L2_px * Math.sin(t12Rad);
+      const ey = cy + L2_px * Math.cos(t12Rad);
+
+      // Update the x1, y1, x2, y2 of the SVG <line> elements representing Link 1
+      const link1Lines = document.querySelectorAll('.link1-line');
+      link1Lines.forEach(line => {
+        line.setAttribute('x1', BaseX);
+        line.setAttribute('y1', BaseY);
+        line.setAttribute('x2', cx);
+        line.setAttribute('y2', cy);
+      });
+
+      // Update the x1, y1, x2, y2 of the SVG <line> elements representing Link 2
+      const link2Lines = document.querySelectorAll('.link2-line');
+      link2Lines.forEach(line => {
+        line.setAttribute('x1', cx);
+        line.setAttribute('y1', cy);
+        line.setAttribute('x2', ex);
+        line.setAttribute('y2', ey);
+      });
+
+      // Update cx, cy for the elbow circles
+      const elbowCircles = document.querySelectorAll('.elbow-circle');
+      elbowCircles.forEach(circle => {
+        circle.setAttribute('cx', cx);
+        circle.setAttribute('cy', cy);
+      });
+
+      const elbowCanister = document.getElementById('elbow_canister');
+      if (elbowCanister) {
+        elbowCanister.setAttribute('x', cx - 16);
+        elbowCanister.setAttribute('y', cy - 16);
+      }
+      const elbowLabel = document.getElementById('elbow_label');
+      if (elbowLabel) {
+        elbowLabel.setAttribute('x', cx + 20);
+        elbowLabel.setAttribute('y', cy + 15);
+      }
+      const svgTau2 = document.getElementById('svg_tau2');
+      if (svgTau2) {
+        svgTau2.setAttribute('x', cx + 20);
+        svgTau2.setAttribute('y', cy - 5);
+      }
+
+      // Update cx, cy for the end effector circles
+      const eeCircles = document.querySelectorAll('.ee-circle');
+      eeCircles.forEach(circle => {
+        circle.setAttribute('cx', ex);
+        circle.setAttribute('cy', ey);
+      });
+
+      // Payload Mass Block
+      const payloadBox = document.getElementById('payload_box');
+      if (payloadBox) {
+        payloadBox.setAttribute('x', ex - 17);
+        payloadBox.setAttribute('y', ey + 10);
+      }
+      const svgPayloadLabel = document.getElementById('svg_payload_label');
+      if (svgPayloadLabel) {
+        svgPayloadLabel.setAttribute('x', ex);
+        svgPayloadLabel.setAttribute('y', ey + 25);
+        svgPayloadLabel.textContent = mload.toFixed(2) + ' kg';
+      }
+
+      // Payload Downward Force Vector
+      const eeForceArrow = document.getElementById('ee_force_arrow');
+      if (eeForceArrow) {
+        eeForceArrow.setAttribute('x1', ex);
+        eeForceArrow.setAttribute('y1', ey + 34);
+        eeForceArrow.setAttribute('x2', ex);
+        eeForceArrow.setAttribute('y2', ey + 64);
+      }
+      const eeForceText = document.getElementById('ee_force_text');
+      if (eeForceText) {
+        const fLoad = mload * (gravityActive ? 9.81 : 0.0);
+        eeForceText.setAttribute('x', ex + 8);
+        eeForceText.setAttribute('y', ey + 56);
+        eeForceText.textContent = 'F_load (' + fLoad.toFixed(1) + ' N)';
+      }
+
+      // TCP Callout Badge & Coordinate Text
+      const tcpX_m = - (ex - BaseX) / SCALE;
+      const tcpY_m = (ey - BaseY) / SCALE;
+
+      if (statX) statX.innerText = tcpX_m.toFixed(3);
+      if (statY) statY.innerText = tcpY_m.toFixed(3);
+
+      const tcpBadgeBg = document.getElementById('tcp_badge_bg');
+      const svgTcpText = document.getElementById('svg_tcp_text');
+      if (svgTcpText) {
+        svgTcpText.textContent = 'TCP: [' + tcpX_m.toFixed(3) + ', ' + tcpY_m.toFixed(3) + '] m';
+        svgTcpText.setAttribute('x', ex + 24);
+        svgTcpText.setAttribute('y', ey + 4);
+      }
+      if (tcpBadgeBg) {
+        tcpBadgeBg.setAttribute('x', ex + 18);
+        tcpBadgeBg.setAttribute('y', ey - 10);
+      }
+
+      // Link 1 Center of Mass (CoM 1)
+      const com1_x = (BaseX + cx) / 2;
+      const com1_y = (BaseY + cy) / 2;
+      const com1Circle = document.getElementById('com1_circle');
+      if (com1Circle) {
+        com1Circle.setAttribute('cx', com1_x);
+        com1Circle.setAttribute('cy', com1_y);
+      }
+      const com1Arrow = document.getElementById('com1_arrow');
+      if (com1Arrow) {
+        com1Arrow.setAttribute('x1', com1_x);
+        com1Arrow.setAttribute('y1', com1_y);
+        com1Arrow.setAttribute('x2', com1_x);
+        com1Arrow.setAttribute('y2', com1_y + 35);
+      }
+      const com1Text = document.getElementById('com1_text');
+      if (com1Text) {
+        const f1 = m1 * (gravityActive ? 9.81 : 0.0);
+        com1Text.setAttribute('x', com1_x + 8);
+        com1Text.setAttribute('y', com1_y + 27);
+        com1Text.textContent = 'm1·g (' + f1.toFixed(1) + 'N)';
+      }
+      const svgL1Label = document.getElementById('svg_l1_label');
+      if (svgL1Label) {
+        svgL1Label.setAttribute('x', com1_x - 15);
+        svgL1Label.setAttribute('y', com1_y - 8);
+        svgL1Label.textContent = 'L1 = ' + l1.toFixed(2) + 'm';
+      }
+
+      // Link 2 Center of Mass (CoM 2)
+      const com2_x = (cx + ex) / 2;
+      const com2_y = (cy + ey) / 2;
+      const com2Circle = document.getElementById('com2_circle');
+      if (com2Circle) {
+        com2Circle.setAttribute('cx', com2_x);
+        com2Circle.setAttribute('cy', com2_y);
+      }
+      const com2Arrow = document.getElementById('com2_arrow');
+      if (com2Arrow) {
+        com2Arrow.setAttribute('x1', com2_x);
+        com2Arrow.setAttribute('y1', com2_y);
+        com2Arrow.setAttribute('x2', com2_x);
+        com2Arrow.setAttribute('y2', com2_y + 32);
+      }
+      const com2Text = document.getElementById('com2_text');
+      if (com2Text) {
+        const f2 = m2 * (gravityActive ? 9.81 : 0.0);
+        com2Text.setAttribute('x', com2_x + 8);
+        com2Text.setAttribute('y', com2_y + 26);
+        com2Text.textContent = 'm2·g (' + f2.toFixed(1) + 'N)';
+      }
+      const svgL2Label = document.getElementById('svg_l2_label');
+      if (svgL2Label) {
+        svgL2Label.setAttribute('x', com2_x - 15);
+        svgL2Label.setAttribute('y', com2_y - 8);
+        svgL2Label.textContent = 'L2 = ' + l2.toFixed(2) + 'm';
+      }
+
+      return { l1, l2, x: tcpX_m, y: tcpY_m };
+    }
+
+    // Server-Side Torque Calculation via Flask API
+    async function fetchCalculation() {
+      const m1 = parseFloat(inputM1?.value) || 0;
+      const m2 = parseFloat(inputM2?.value) || 0;
+      const mmotor = parseFloat(inputMmotor?.value) || 0;
+      const mload = parseFloat(inputMload?.value) || 0;
+      const l1 = parseFloat(inputL1?.value) || 0;
+      const l2 = parseFloat(inputL2?.value) || 0;
+      const a1 = parseFloat(inputA1?.value) || 0;
+      const a2 = parseFloat(inputA2?.value) || 0;
+      const theta1 = parseFloat(inputT1?.value) || 0;
+      const theta2 = parseFloat(inputT2?.value) || 0;
+      const gravity = gravityActive ? 9.81 : 0.0;
+
+      const payload = {
+        m1: m1,
+        m2: m2,
+        mmotor: mmotor,
+        mload: mload,
+        l1: l1,
+        l2: l2,
+        a1: a1,
+        a2: a2,
+        theta1: theta1,
+        theta2: theta2,
+        t1: theta1,
+        t2: theta2,
+        gravity: gravity
+      };
+
+      try {
+        const response = await fetch('/api/calculate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error('Server returned HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+        renderCalculationResults(data);
+      } catch (err) {
+        console.error('Calculation fetch error:', err);
+      }
+    }
+
+    // Render Calculation Data into the Web UI
+    function renderCalculationResults(data) {
+      const j1Peak = data.base.peak_torque;
+      const j1Cont = data.base.continuous_torque;
+      const j1Accel = Math.max(0, j1Peak - j1Cont);
+
+      const j2Peak = data.elbow.peak_torque;
+      const j2Cont = data.elbow.continuous_torque;
+      const j2Accel = Math.max(0, j2Peak - j2Cont);
+
+      // Hero Metrics - Joint 1 (Base)
+      if (valTorqueJ1) valTorqueJ1.innerText = j1Peak.toFixed(1);
+      if (valContTorqueJ1) valContTorqueJ1.innerText = j1Cont.toFixed(1);
+
+      // Hero Metrics - Joint 2 (Elbow)
+      if (valTorqueJ2) valTorqueJ2.innerText = j2Peak.toFixed(1);
+      if (valContTorqueJ2) valContTorqueJ2.innerText = j2Cont.toFixed(1);
+
+      // Schematic SVG Torque Labels
+      const svgTau1 = document.getElementById('svg_tau1');
+      if (svgTau1) svgTau1.textContent = 'τ1 = ' + j1Peak.toFixed(1) + ' N·m';
+      const svgTau2 = document.getElementById('svg_tau2');
+      if (svgTau2) svgTau2.textContent = 'τ2 = ' + j2Peak.toFixed(1) + ' N·m';
+
+      // Dynamics Table Vectors
+      const tableJ1Peak = document.getElementById('table_j1_peak');
+      const tableJ1G = document.getElementById('table_j1_g');
+      const tableJ1Accel = document.getElementById('table_j1_accel');
+      if (tableJ1Peak) tableJ1Peak.innerText = j1Peak.toFixed(1);
+      if (tableJ1G) tableJ1G.innerText = j1Cont.toFixed(1);
+      if (tableJ1Accel) tableJ1Accel.innerText = j1Accel.toFixed(1);
+
+      const tableJ2Peak = document.getElementById('table_j2_peak');
+      const tableJ2G = document.getElementById('table_j2_g');
+      const tableJ2Accel = document.getElementById('table_j2_accel');
+      if (tableJ2Peak) tableJ2Peak.innerText = j2Peak.toFixed(1);
+      if (tableJ2G) tableJ2G.innerText = j2Cont.toFixed(1);
+      if (tableJ2Accel) tableJ2Accel.innerText = j2Accel.toFixed(1);
+
+      // Dynamics Breakdown Percentages & Progress Bars
+      const breakdownAccel = document.getElementById('breakdown_accel');
+      const breakdownG = document.getElementById('breakdown_g');
+      const barAccel = document.getElementById('bar_accel');
+      const barG = document.getElementById('bar_g');
+
+      if (j1Peak > 0) {
+        const pctAccel = Math.min(100, Math.max(0, (j1Accel / j1Peak) * 100));
+        const pctG = Math.min(100, Math.max(0, (j1Cont / j1Peak) * 100));
+        if (breakdownAccel) breakdownAccel.innerText = j1Accel.toFixed(1) + ' N·m (' + Math.round(pctAccel) + '%)';
+        if (breakdownG) breakdownG.innerText = j1Cont.toFixed(1) + ' N·m (' + Math.round(pctG) + '%)';
+        if (barAccel) barAccel.style.width = pctAccel + '%';
+        if (barG) barG.style.width = pctG + '%';
+      }
+
+      
+
+      // Total Moving Mass & Reach Indicators
+      const statTotalMass = document.getElementById('stat_total_mass');
+      if (statTotalMass) statTotalMass.innerText = data.total_moving_mass_kg.toFixed(2);
+
+      const statMassHeader = document.getElementById('stat_mass_header');
+      if (statMassHeader) statMassHeader.innerText = 'TOTAL: ' + data.total_moving_mass_kg.toFixed(2) + ' kg';
+
+      const statReachMax = document.getElementById('stat_reach_max');
+      if (statReachMax) statReachMax.innerText = '/ ' + data.total_reach_m.toFixed(2) + 'm MAX';
+
+      const statReach = document.getElementById('stat_reach');
+      if (statReach) {
+        const kin = updateLocalKinematics();
+        const curReach = Math.hypot(kin.x, kin.y);
+        const reachPercent = data.total_reach_m > 0 ? (curReach / data.total_reach_m) * 100 : 0;
+        statReach.innerText = Math.min(100, reachPercent).toFixed(1);
+      }
+    }
+
+    // Combined Trigger with Debounce
+    function triggerUpdate() {
+      updateLocalKinematics();
+      clearTimeout(fetchDebounceTimer);
+      fetchDebounceTimer = setTimeout(fetchCalculation, 15);
+    }
+
+    // Attach Event Listeners to All Numeric Inputs
+    const allInputControls = [
+      inputL1, inputL2, inputT1, inputT2,
+      inputM1, inputM2, inputMmotor, inputMload,
+      inputA1, inputA2
+    ];
+
+    allInputControls.forEach(ctrl => {
+      if (ctrl) {
+        ctrl.addEventListener('input', triggerUpdate);
+        ctrl.addEventListener('change', triggerUpdate);
+      }
+    });
+
+    // Preset Buttons
+    const btnWorst = document.getElementById('preset_worst');
+    if (btnWorst) {
+      btnWorst.addEventListener('click', () => {
+        if (inputT1) inputT1.value = 90;
+        if (inputT2) inputT2.value = 0;
+        if (inputA1) inputA1.value = 25.0;
+        if (inputA2) inputA2.value = 30.0;
+        triggerUpdate();
+      });
+    }
+
+    const btnNominal = document.getElementById('preset_nominal');
+    if (btnNominal) {
+      btnNominal.addEventListener('click', () => {
+        if (inputT1) inputT1.value = 35;
+        if (inputT2) inputT2.value = 45;
+        if (inputA1) inputA1.value = 12.5;
+        if (inputA2) inputA2.value = 18.0;
+        triggerUpdate();
+      });
+    }
+
+    const btnVertical = document.getElementById('preset_vertical');
+    if (btnVertical) {
+      btnVertical.addEventListener('click', () => {
+        if (inputT1) inputT1.value = 0;
+        if (inputT2) inputT2.value = 0;
+        if (inputA1) inputA1.value = 8.0;
+        if (inputA2) inputA2.value = 10.0;
+        triggerUpdate();
+      });
+    }
+
+    // Gravity Toggles
+    const btnG0 = document.getElementById('btn_g0');
+    const btnG1 = document.getElementById('btn_g1');
+
+    if (btnG0) {
+      btnG0.addEventListener('click', () => {
+        gravityActive = false;
+        btnG0.className = "px-2 py-0.5 text-hud-caption font-hud-caption bg-surface-container-high border border-primary-container text-primary-container font-semibold";
+        if (btnG1) btnG1.className = "px-2 py-0.5 text-hud-caption font-hud-caption border border-outline-variant text-on-surface-variant hover:text-on-surface";
+        triggerUpdate();
+      });
+    }
+
+    if (btnG1) {
+      btnG1.addEventListener('click', () => {
+        gravityActive = true;
+        btnG1.className = "px-2 py-0.5 text-hud-caption font-hud-caption bg-surface-container-high border border-primary-container text-primary-container font-semibold";
+        if (btnG0) btnG0.className = "px-2 py-0.5 text-hud-caption font-hud-caption border border-outline-variant text-on-surface-variant hover:text-on-surface";
+        triggerUpdate();
+      });
+    }
+
+    // Initial Execution on Load
+    updateLocalKinematics();
+    fetchCalculation();
+  </script>
+</body></html>

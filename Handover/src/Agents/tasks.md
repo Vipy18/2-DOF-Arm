@@ -1,0 +1,25 @@
+- [x] Write oscillate_motors.py to control Motor 1 and 2
+- [x] Verify safety and robustness of oscillate_motors.py
+- [x] Implement hardware heartbeat and signal handlers in oscillate_motors.py
+- [x] Verify safety architecture of updated script
+- [x] 2-DOF arm inverse kinematics and -Y gravity coordinate frame implementation in ArmControl.m and ArmMonitor.m (Verified Passed)
+- [x] Correct Kinematics CW/CCW Chirality for visualizer matching physical arm (Verified Passed)
+- [x] Refactor UI layout: IK and Motor Commands side cards, larger Oscilloscope (Verified Passed)
+- [x] Emergency UI layout fix: 2x4 grid to uncrush visualizer and restore Send Both button (Verified Passed)
+- [x] UI layout stacking fix: 1600x950 resolution, 2x4 grid stacking, fixed row heights (Verified Passed)
+- [x] IK angle wrapping fix (3 locations) + Sidebar architecture layout (Verified Passed)
+- [x] Fix IK angle wrapping bug (th1 overflow by 0.06 rad) (Verified Passed)
+- [x] Fix read_limits_to_panel UI crash on out-of-range motor values (Verified Passed)
+- [ ] Implement Canvas Wrapper architecture for UI scrolling (MATLAB uigridlayout bug workaround)
+- [x] Implement Canvas Wrapper architecture for UI scrolling (MATLAB uigridlayout bug workaround) (Verified Passed)
+- [x] Fixed canvas vertical anchor math to prevent UI ceiling clipping
+- [x] Expanded main_grid row 2 height to 1300px to accommodate massive sidebar architecture
+- [x] Reorganize ArmMonitor into balanced 4-column mission-control layout (Verified Passed)
+- [x] Expand software joint limits to +/-4pi (+/-720 deg) matching RS02 multi-turn firmware (Verified Passed)
+- [x] Implement shortest-path angular unwrapping in ArmControl.m and ArmMonitor.m (Verified Passed)
+- [x] Implement Point-to-Point (P2P) coordinate trajectory generation with Linear, Joint Curve, and Arch profiles (Verified Passed)
+- [x] Add trajectory preview, speed/accel controls, and non-blocking streaming execution in ArmMonitor.m (Verified Passed)
+- [x] Perform comprehensive kinematics verification (FK/IK round-trip, chirality, boundaries, singularities, shortest-path) (Verified Passed)
+- [x] Add CSV Data Logging Column with manual and timed logging, configurable save directory, and dual-motor telemetry streaming (Verified Passed)
+- [x] Extend CSV Data Logger to log all static motor parameters (Limits, PID gains, filter constants, arm geometry) (Verified Passed)
+

@@ -1,0 +1,38 @@
+# Node & Desktop App
+**/node_modules/
+**/dist/
+**/build/
+**/out/
+ArmControlApp/dist/
+ArmControlApp/build/
+ArmControlApp/out/
+*.exe.block
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Temporary & Editor
+.cursor/
+.kiro/
+.snapshots/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# MATLAB
+matlab_workspace.mat
+*.asv
+
+# Archives
+*.zip
+*.tar.gz

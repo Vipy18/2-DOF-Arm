@@ -1,0 +1,808 @@
+Created At: 2026-09-12T15:39:37+05:30
+Completed At: 2026-09-12T15:39:37+05:30
+File Path: `file:///d:/PRJ/Robstride/matlab/ArmMonitor.m`
+Total Lines: 2314
+Total Bytes: 105497
+Showing lines 800 to 1599
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+                    if isstruct(limits)
+                        if isfield(limits, 'limit_spd') && ~isnan(limits.limit_spd)
+                            vel_val = limits.limit_spd;
+                        elseif isfield(limits, 'vel_lim') && ~isnan(limits.vel_lim)
+                            vel_val = limits.vel_lim;
+                        elseif isfield(limits, 'max_vel') && ~isnan(limits.max_vel)
+                            vel_val = limits.max_vel;
+                        end
+                        if isfield(limits, 'limit_cur') && ~isnan(limits.limit_cur)
+                            cur_val = limits.limit_cur;
+                        elseif isfield(limits, 'cur_lim') && ~isnan(limits.cur_lim)
+                            cur_val = limits.cur_lim;
+                        elseif isfield(limits, 'max_cur') && ~isnan(limits.max_cur)
+                            cur_val = limits.max_cur;
+                        end
+                        if isfield(limits, 'limit_torque') && ~isnan(limits.limit_torque)
+                            tor_val = limits.limit_torque;
+                        elseif isfield(limits, 'torque_lim') && ~isnan(limits.torque_lim)
+                            tor_val = limits.torque_lim;
+                        elseif isfield(limits, 'max_torque') && ~isnan(limits.max_torque)
+                            tor_val = limits.max_torque;
+                        end
+                    elseif isnumeric(limits) && length(limits) >= 3
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                        tor_val = limits(3);
+                    elseif isnumeric(limits) && length(limits) >= 2
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                    end
+
+                    % If deg mode, convert motor rad/s to deg/s
+                    if is_deg && ~isnan(vel_val)
+                        vel_val = round(vel_val * (180 / pi), 1);
+                    end
+
+                    if is_m1
+                        if ~isnan(vel_val)
+                            try
+                                if vel_val < obj.m1_vel_lim_field.Limits(1) || vel_val > obj.m1_vel_lim_field.Limits(2)
+                                    obj.m1_vel_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m1_vel_lim_field.Value = vel_val;
+                            catch
+                            end
+                        end
+                        if ~isnan(cur_val)
+                            try
+                                if cur_val < obj.m1_cur_lim_field.Limits(1) || cur_val > obj.m1_cur_lim_field.Limits(2)
+                                    obj.m1_cur_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m1_cur_lim_field.Value = cur_val;
+                            catch
+                            end
+                        end
+                        if ~isnan(tor_val)
+                            try
+                                if tor_val < obj.m1_tor_lim_field.Limits(1) || tor_val > obj.m1_tor_lim_field.Limits(2)
+                                    obj.m1_tor_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m1_tor_lim_field.Value = tor_val;
+                            catch
+                            end
+                        end
+                    else
+                        if ~isnan(vel_val)
+                            try
+                                if vel_val < obj.m2_vel_lim_field.Limits(1) || vel_val > obj.m2_vel_lim_field.Limits(2)
+                                    obj.m2_vel_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m2_vel_lim_field.Value = vel_val;
+                            catch
+                            end
+                        end
+                        if ~isnan(cur_val)
+                            try
+                                if cur_val < obj.m2_cur_lim_field.Limits(1) || cur_val > obj.m2_cur_lim_field.Limits(2)
+                                    obj.m2_cur_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m2_cur_lim_field.Value = cur_val;
+                            catch
+                            end
+                        end
+                        if ~isnan(tor_val)
+                            try
+                                if tor_val < obj.m2_tor_lim_field.Limits(1) || tor_val > obj.m2_tor_lim_field.Limits(2)
+                                    obj.m2_tor_lim_field.Limits = [-Inf, Inf];
+                                end
+                                obj.m2_tor_lim_field.Value = tor_val;
+                            catch
+                            end
+                        end
+                    end
+                end
+            catch e
+                warning('ArmMonitor:readLimits', 'Could not read limits: %s', e.message);
+            end
+        end
+
+        function write_limits_from_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                if is_m1
+                    min_val = obj.m1_pos_min_field.Value;
+                    max_val = obj.m1_pos_max_field.Value;
+                    vel_val = obj.m1_vel_lim_field.Value;
+                    cur_val = obj.m1_cur_lim_field.Value;
+                    tor_val = obj.m1_tor_lim_field.Value;
+                else
+                    min_val = obj.m2_pos_min_field.Value;
+                    max_val = obj.m2_pos_max_field.Value;
+                    vel_val = obj.m2_vel_lim_field.Value;
+                    cur_val = obj.m2_cur_lim_field.Value;
+                    tor_val = obj.m2_tor_lim_field.Value;
+                end
+
+                % Clamp safety limits
+                if min_val > max_val
+                    tmp = min_val;
+                    min_val = max_val;
+                    max_val = tmp;
+                end
+
+                unit = 'deg';
+                if ~isempty(obj.unit_dropdown) && isvalid(obj.unit_dropdown)
+                    unit = obj.unit_dropdown.Value;
+                end
+                is_deg = strcmp(unit, 'deg');
+
+                % Convert to radians for ArmControl
+                if is_deg
+                    min_rad = min_val * (pi / 180);
+                    max_rad = max_val * (pi / 180);
+                    vel_rad = vel_val * (pi / 180);
+                    vel_rad = max(0, min(33, vel_rad));
+                    vel_val = round(vel_rad * (180 / pi), 1); % Clamped display value in deg/s
+                else
+                    min_rad = min_val;
+                    max_rad = max_val;
+                    vel_rad = max(0, min(33, vel_val));
+                    vel_val = vel_rad;
+                end
+
+                cur_val = max(0, min(16, cur_val));
+                tor_val = max(0, min(17, tor_val));
+
+                % Update UI fields with clamped values
+                if is_m1
+                    obj.m1_pos_min_field.Value = min_val;
+                    obj.m1_pos_max_field.Value = max_val;
+                    obj.m1_vel_lim_field.Value = vel_val;
+                    obj.m1_cur_lim_field.Value = cur_val;
+                    obj.m1_tor_lim_field.Value = tor_val;
+                else
+                    obj.m2_pos_min_field.Value = min_val;
+                    obj.m2_pos_max_field.Value = max_val;
+                    obj.m2_vel_lim_field.Value = vel_val;
+                    obj.m2_cur_lim_field.Value = cur_val;
+                    obj.m2_tor_lim_field.Value = tor_val;
+                end
+
+                obj.arm.set_joint_limits(motor_id, min_rad, max_rad);
+                obj.arm.set_velocity_limit(motor_id, vel_rad);
+                obj.arm.set_current_limit(motor_id, cur_val);
+                obj.arm.set_torque_limit(motor_id, tor_val);
+                fprintf('Limits written to Motor %d (Max Vel = %.2f rad/s).\n', motor_id, vel_rad);
+            catch e
+                warning('ArmMonitor:writeLimits', 'Could not write limits: %s', e.message);
+            end
+        end
+
+        function read_pid_to_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+                pid = obj.arm.read_pid(motor_id);
+                if ~isstruct(pid)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                % Extract 7 values with fallbacks
+                val_pos_kp = NaN;
+                if isfield(pid, 'loc_kp') && ~isnan(pid.loc_kp)
+                    val_pos_kp = pid.loc_kp;
+                elseif isfield(pid, 'kp_pos') && ~isnan(pid.kp_pos)
+                    val_pos_kp = pid.kp_pos;
+                end
+
+                val_vel_kp = NaN;
+                if isfield(pid, 'spd_kp') && ~isnan(pid.spd_kp)
+                    val_vel_kp = pid.spd_kp;
+                elseif isfield(pid, 'kp_vel') && ~isnan(pid.kp_vel)
+                    val_vel_kp = pid.kp_vel;
+                end
+
+                val_vel_ki = NaN;
+                if isfield(pid, 'spd_ki') && ~isnan(pid.spd_ki)
+                    val_vel_ki = pid.spd_ki;
+                elseif isfield(pid, 'ki_vel') && ~isnan(pid.ki_vel)
+                    val_vel_ki = pid.ki_vel;
+                end
+
+                val_vel_filt = NaN;
+                if isfield(pid, 'spd_filt') && ~isnan(pid.spd_filt)
+                    val_vel_filt = pid.spd_filt;
+                elseif isfield(pid, 'kd_vel') && ~isnan(pid.kd_vel)
+                    val_vel_filt = pid.kd_vel;
+                end
+
+                val_cur_kp = NaN;
+                if isfield(pid, 'cur_kp') && ~isnan(pid.cur_kp)
+                    val_cur_kp = pid.cur_kp;
+                end
+
+                val_cur_ki = NaN;
+                if isfield(pid, 'cur_ki') && ~isnan(pid.cur_ki)
+                    val_cur_ki = pid.cur_ki;
+                end
+
+                val_cur_filt = NaN;
+                if isfield(pid, 'cur_filt') && ~isnan(pid.cur_filt)
+                    val_cur_filt = pid.cur_filt;
+                end
+
+                if is_m1
+                    if ~isnan(val_pos_kp),   obj.m1_kp_pos_field.Value   = val_pos_kp; end
+                    if ~isnan(val_vel_kp),   obj.m1_kp_vel_field.Value   = val_vel_kp; end
+                    if ~isnan(val_vel_ki),   obj.m1_ki_vel_field.Value   = val_vel_ki; end
+                    if ~isnan(val_vel_filt), obj.m1_kd_vel_field.Value   = val_vel_filt; end
+                    if ~isnan(val_cur_kp),   obj.m1_kp_cur_field.Value   = val_cur_kp; end
+                    if ~isnan(val_cur_ki),   obj.m1_ki_cur_field.Value   = val_cur_ki; end
+                    if ~isnan(val_cur_filt), obj.m1_filt_cur_field.Value = val_cur_filt; end
+                else
+                    if ~isnan(val_pos_kp),   obj.m2_kp_pos_field.Value   = val_pos_kp; end
+                    if ~isnan(val_vel_kp),   obj.m2_kp_vel_field.Value   = val_vel_kp; end
+                    if ~isnan(val_vel_ki),   obj.m2_ki_vel_field.Value   = val_vel_ki; end
+                    if ~isnan(val_vel_filt), obj.m2_kd_vel_field.Value   = val_vel_filt; end
+                    if ~isnan(val_cur_kp),   obj.m2_kp_cur_field.Value   = val_cur_kp; end
+                    if ~isnan(val_cur_ki),   obj.m2_ki_cur_field.Value   = val_cur_ki; end
+                    if ~isnan(val_cur_filt), obj.m2_filt_cur_field.Value = val_cur_filt; end
+                end
+                fprintf('PID read from Motor %d.\n', motor_id);
+            catch e
+                warning('ArmMonitor:readPID', 'Could not read PID: %s', e.message);
+            end
+        end
+
+        function write_pid_from_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                if is_m1
+                    pos_kp   = obj.m1_kp_pos_field.Value;
+                    vel_kp   = obj.m1_kp_vel_field.Value;
+                    vel_ki   = obj.m1_ki_vel_field.Value;
+                    vel_filt = obj.m1_kd_vel_field.Value;
+                    cur_kp   = obj.m1_kp_cur_field.Value;
+                    cur_ki   = obj.m1_ki_cur_field.Value;
+                    cur_filt = obj.m1_filt_cur_field.Value;
+                else
+                    pos_kp   = obj.m2_kp_pos_field.Value;
+                    vel_kp   = obj.m2_kp_vel_field.Value;
+                    vel_ki   = obj.m2_ki_vel_field.Value;
+                    vel_filt = obj.m2_kd_vel_field.Value;
+                    cur_kp   = obj.m2_kp_cur_field.Value;
+                    cur_ki   = obj.m2_ki_cur_field.Value;
+                    cur_filt = obj.m2_filt_cur_field.Value;
+                end
+
+                % Safety clamps
+                pos_kp   = max(0, min(200, pos_kp));
+                vel_kp   = max(0, min(50, vel_kp));
+                vel_ki   = max(0, min(5, vel_ki));
+                vel_filt = max(0.001, min(1.0, vel_filt));
+                cur_kp   = max(0, min(10, cur_kp));
+                cur_ki   = max(0, min(5, cur_ki));
+                cur_filt = max(0.001, min(1.0, cur_filt));
+
+                % Write clamped values back to edit fields
+                if is_m1
+                    obj.m1_kp_pos_field.Value   = pos_kp;
+                    obj.m1_kp_vel_field.Value   = vel_kp;
+                    obj.m1_ki_vel_field.Value   = vel_ki;
+                    obj.m1_kd_vel_field.Value   = vel_filt;
+                    obj.m1_kp_cur_field.Value   = cur_kp;
+                    obj.m1_ki_cur_field.Value   = cur_ki;
+                    obj.m1_filt_cur_field.Value = cur_filt;
+                else
+                    obj.m2_kp_pos_field.Value   = pos_kp;
+                    obj.m2_kp_vel_field.Value   = vel_kp;
+                    obj.m2_ki_vel_field.Value   = vel_ki;
+                    obj.m2_kd_vel_field.Value   = vel_filt;
+                    obj.m2_kp_cur_field.Value   = cur_kp;
+                    obj.m2_ki_cur_field.Value   = cur_ki;
+                    obj.m2_filt_cur_field.Value = cur_filt;
+                end
+
+                % Apply parameters to arm
+                obj.arm.set_pos_kp(motor_id, pos_kp);
+                obj.arm.set_vel_kp(motor_id, vel_kp);
+                obj.arm.set_vel_ki(motor_id, vel_ki);
+                has_set_vel_filt = ismethod(obj.arm, 'set_vel_filt') || ...
+                    (isstruct(obj.arm) && isfield(obj.arm, 'set_vel_filt'));
+                if has_set_vel_filt
+                    obj.arm.set_vel_filt(motor_id, vel_filt);
+                elseif ismethod(obj.arm, 'set_vel_kd') || (isstruct(obj.arm) && isfield(obj.arm, 'set_vel_kd'))
+                    obj.arm.set_vel_kd(motor_id, vel_filt);
+                end
+                if ismethod(obj.arm, 'set_cur_kp') || (isstruct(obj.arm) && isfield(obj.arm, 'set_cur_kp'))
+                    obj.arm.set_cur_kp(motor_id, cur_kp);
+                end
+                if ismethod(obj.arm, 'set_cur_ki') || (isstruct(obj.arm) && isfield(obj.arm, 'set_cur_ki'))
+                    obj.arm.set_cur_ki(motor_id, cur_ki);
+                end
+                if ismethod(obj.arm, 'set_cur_filt') || (isstruct(obj.arm) && isfield(obj.arm, 'set_cur_filt'))
+                    obj.arm.set_cur_filt(motor_id, cur_filt);
+                end
+
+                fprintf('PID written to Motor %d (pos_kp=%.2f, vel_kp=%.2f, vel_ki=%.3f, vel_filt=%.3f, cur_kp=%.3f, cur_ki=%.3f, cur_filt=%.3f).\n', ...
+                    motor_id, pos_kp, vel_kp, vel_ki, vel_filt, cur_kp, cur_ki, cur_filt);
+            catch e
+                warning('ArmMonitor:writePID', 'Could not write PID: %s', e.message);
+            end
+        end
+    end
+    
+    methods (Access = private)
+        function build_motor_widgets(obj, motor_idx)
+            % Helper to create vertical telemetry labels in motor panels
+            if motor_idx == 1
+                parent_panel = obj.m1_panel;
+            else
+                parent_panel = obj.m2_panel;
+            end
+            
+            grid = uigridlayout(parent_panel, [6, 3]);
+            grid.ColumnWidth = {95, '1x', '1x'};
+            grid.RowHeight = {40, 40, 40, 40, 40, 40};
+            grid.Padding = [12, 16, 12, 16];
+            grid.RowSpacing = 12;
+            grid.ColumnSpacing = 8;
+            
+            % Row 1: Position (rad + deg)
+            lbl_pos_title = uilabel(grid);
+            lbl_pos_title.Layout.Row = 1;
+            lbl_pos_title.Layout.Column = 1;
+            lbl_pos_title.Text = 'Position:';
+            lbl_pos_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_pos_title.FontSize = 13;
+            lbl_pos_title.FontWeight = 'bold';
+            lbl_pos_title.VerticalAlignment = 'center';
+            
+            pos_rad_lbl = uilabel(grid);
+            pos_rad_lbl.Layout.Row = 1;
+            pos_rad_lbl.Layout.Column = 2;
+            pos_rad_lbl.Text = '0.000 rad';
+            pos_rad_lbl.FontName = 'Courier New';
+            pos_rad_lbl.FontSize = 14;
+            pos_rad_lbl.FontColor = [1.0, 1.0, 1.0];
+            pos_rad_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            pos_rad_lbl.HorizontalAlignment = 'center';
+            pos_rad_lbl.VerticalAlignment = 'center';
+            
+            pos_deg_lbl = uilabel(grid);
+            pos_deg_lbl.Layout.Row = 1;
+            pos_deg_lbl.Layout.Column = 3;
+            pos_deg_lbl.Text = '0.0 deg';
+            pos_deg_lbl.FontName = 'Courier New';
+            pos_deg_lbl.FontSize = 14;
+            pos_deg_lbl.FontColor = [1.0, 1.0, 1.0];
+            pos_deg_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            pos_deg_lbl.HorizontalAlignment = 'center';
+            pos_deg_lbl.VerticalAlignment = 'center';
+            
+            % Row 2: Velocity
+            lbl_vel_title = uilabel(grid);
+            lbl_vel_title.Layout.Row = 2;
+            lbl_vel_title.Layout.Column = 1;
+            lbl_vel_title.Text = 'Velocity:';
+            lbl_vel_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_vel_title.FontSize = 13;
+            lbl_vel_title.FontWeight = 'bold';
+            lbl_vel_title.VerticalAlignment = 'center';
+            
+            vel_lbl = uilabel(grid);
+            vel_lbl.Layout.Row = 2;
+            vel_lbl.Layout.Column = [2, 3];
+            vel_lbl.Text = '0.00 rad/s';
+            vel_lbl.FontName = 'Courier New';
+            vel_lbl.FontSize = 14;
+            vel_lbl.FontColor = [1.0, 1.0, 1.0];
+            vel_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            vel_lbl.HorizontalAlignment = 'center';
+            vel_lbl.VerticalAlignment = 'center';
+            
+            % Row 3: Current
+            lbl_cur_title = uilabel(grid);
+            lbl_cur_title.Layout.Row = 3;
+            lbl_cur_title.Layout.Column = 1;
+            lbl_cur_title.Text = 'Phase Current:';
+            lbl_cur_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_cur_title.FontSize = 13;
+            lbl_cur_title.FontWeight = 'bold';
+            lbl_cur_title.VerticalAlignment = 'center';
+            
+            cur_lbl = uilabel(grid);
+            cur_lbl.Layout.Row = 3;
+            cur_lbl.Layout.Column = [2, 3];
+            cur_lbl.Text = '0.00 A';
+            cur_lbl.FontName = 'Courier New';
+            cur_lbl.FontSize = 14;
+            cur_lbl.FontColor = [1.0, 1.0, 1.0];
+            cur_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            cur_lbl.HorizontalAlignment = 'center';
+            cur_lbl.VerticalAlignment = 'center';
+            
+            % Row 4: Voltage
+            lbl_volt_title = uilabel(grid);
+            lbl_volt_title.Layout.Row = 4;
+            lbl_volt_title.Layout.Column = 1;
+            lbl_volt_title.Text = 'Voltage:';
+            lbl_volt_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_volt_title.FontSize = 13;
+            lbl_volt_title.FontWeight = 'bold';
+            lbl_volt_title.VerticalAlignment = 'center';
+            
+            volt_lbl = uilabel(grid);
+            volt_lbl.Layout.Row = 4;
+            volt_lbl.Layout.Column = [2, 3];
+            volt_lbl.Text = '0.0 V';
+            volt_lbl.FontName = 'Courier New';
+            volt_lbl.FontSize = 14;
+            volt_lbl.FontColor = [1.0, 1.0, 1.0];
+            volt_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            volt_lbl.HorizontalAlignment = 'center';
+            volt_lbl.VerticalAlignment = 'center';
+            
+            % Row 5: Temperature
+            lbl_temp_title = uilabel(grid);
+            lbl_temp_title.Layout.Row = 5;
+            lbl_temp_title.Layout.Column = 1;
+            lbl_temp_title.Text = 'Temperature:';
+            lbl_temp_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_temp_title.FontSize = 13;
+            lbl_temp_title.FontWeight = 'bold';
+            lbl_temp_title.VerticalAlignment = 'center';
+            
+            temp_lbl = uilabel(grid);
+            temp_lbl.Layout.Row = 5;
+            temp_lbl.Layout.Column = [2, 3];
+            temp_lbl.Text = '0.0 deg C';
+            temp_lbl.FontName = 'Courier New';
+            temp_lbl.FontSize = 14;
+            temp_lbl.FontColor = [1.0, 1.0, 1.0];
+            temp_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            temp_lbl.HorizontalAlignment = 'center';
+            temp_lbl.VerticalAlignment = 'center';
+            
+            % Row 6: Fault
+            lbl_fault_title = uilabel(grid);
+            lbl_fault_title.Layout.Row = 6;
+            lbl_fault_title.Layout.Column = 1;
+            lbl_fault_title.Text = 'Fault:';
+            lbl_fault_title.FontColor = [0.8, 0.8, 0.8];
+            lbl_fault_title.FontSize = 13;
+            lbl_fault_title.FontWeight = 'bold';
+            lbl_fault_title.VerticalAlignment = 'center';
+            
+            fault_lbl = uilabel(grid);
+            fault_lbl.Layout.Row = 6;
+            fault_lbl.Layout.Column = [2, 3];
+            fault_lbl.Text = 'OK';
+            fault_lbl.FontName = 'Courier New';
+            fault_lbl.FontSize = 14;
+            fault_lbl.FontColor = [0.4, 1.0, 0.4];
+            fault_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+            fault_lbl.HorizontalAlignment = 'center';
+            fault_lbl.VerticalAlignment = 'center';
+            
+            % Assign to object properties
+            if motor_idx == 1
+                obj.m1_pos_rad_lbl = pos_rad_lbl;
+                obj.m1_pos_deg_lbl = pos_deg_lbl;
+                obj.m1_vel_lbl     = vel_lbl;
+                obj.m1_cur_lbl     = cur_lbl;
+                obj.m1_volt_lbl    = volt_lbl;
+                obj.m1_temp_lbl    = temp_lbl;
+                obj.m1_fault_lbl   = fault_lbl;
+            else
+                obj.m2_pos_rad_lbl = pos_rad_lbl;
+                obj.m2_pos_deg_lbl = pos_deg_lbl;
+                obj.m2_vel_lbl     = vel_lbl;
+                obj.m2_cur_lbl     = cur_lbl;
+                obj.m2_volt_lbl    = volt_lbl;
+                obj.m2_temp_lbl    = temp_lbl;
+                obj.m2_fault_lbl   = fault_lbl;
+            end
+        end
+        
+        function redraw_arm(obj, th1, th2)
+            % Redraws the 2-link robotic arm by deleting old lines and replotting
+            try
+                if isempty(obj.ax) || ~isgraphics(obj.ax)
+                    return;
+                end
+                
+                % Query arm geometry
+                l1 = obj.L1;
+                l2 = obj.L2;
+                if ~isempty(obj.arm)
+                    if isprop(obj.arm, 'L1') && ~isempty(obj.arm.L1)
+                        l1 = obj.arm.L1;
+                    end
+                    if isprop(obj.arm, 'L2') && ~isempty(obj.arm.L2)
+                        l2 = obj.arm.L2;
+                    end
+                end
+                
+                % Compute joint coordinates (zero position pointing straight down)
+                elbow_x = -l1 * sin(th1);
+                elbow_y = -l1 * cos(th1);
+                
+                % End-effector from FK
+                ee_x = elbow_x - l2 * sin(th1 + th2);
+                ee_y = elbow_y - l2 * cos(th1 + th2);
+                if ~isempty(obj.arm) && ismethod(obj.arm, 'forward_kinematics')
+                    try
+                        [fk_x, fk_y] = obj.arm.forward_kinematics(th1, th2);
+                        ee_x = fk_x;
+                        ee_y = fk_y;
+                    catch
+                    end
+                end
+                
+                % Update link lines and joint markers in-place
+                if ~isempty(obj.h_base_link) && isgraphics(obj.h_base_link)
+                    set(obj.h_base_link, 'XData', [0, elbow_x], 'YData', [0, elbow_y]);
+                else
+                    obj.h_base_link = plot(obj.ax, [0, elbow_x], [0, elbow_y], '-', ...
+                        'Color', [1.0, 1.0, 1.0], 'LineWidth', 4);
+                end
+                
+                if ~isempty(obj.h_fore_link) && isgraphics(obj.h_fore_link)
+                    set(obj.h_fore_link, 'XData', [elbow_x, ee_x], 'YData', [elbow_y, ee_y]);
+                else
+                    obj.h_fore_link = plot(obj.ax, [elbow_x, ee_x], [elbow_y, ee_y], '-', ...
+                        'Color', [0.35, 0.75, 1.0], 'LineWidth', 4);
+                end
+                
+                if ~isempty(obj.h_elbow_joint) && isgraphics(obj.h_elbow_joint)
+                    set(obj.h_elbow_joint, 'XData', elbow_x, 'YData', elbow_y);
+                else
+                    obj.h_elbow_joint = plot(obj.ax, elbow_x, elbow_y, 'o', ...
+                        'MarkerFaceColor', [0.2, 0.6, 1.0], ...
+                        'MarkerEdgeColor', [1.0, 1.0, 1.0], ...
+                        'MarkerSize', 8);
+                end
+                
+                if ~isempty(obj.h_ee_joint) && isgraphics(obj.h_ee_joint)
+                    set(obj.h_ee_joint, 'XData', ee_x, 'YData', ee_y);
+                else
+                    obj.h_ee_joint = plot(obj.ax, ee_x, ee_y, 'o', ...
+                        'MarkerFaceColor', [1.0, 0.4, 0.2], ...
+                        'MarkerEdgeColor', [1.0, 1.0, 1.0], ...
+                        'MarkerSize', 9);
+                end
+                
+                drawnow limitrate;
+            catch
+                return;
+            end
+        end
+        
+        function build_pid_panel(obj)
+            pg = uigridlayout(obj.pid_panel, [9, 3]);
+            pg.ColumnWidth = {80, '1x', '1x'};
+            pg.RowHeight = {25, 36, 36, 36, 36, 36, 36, 36, 40};
+            pg.Padding = [10, 10, 10, 10];
+            pg.RowSpacing = 6;
+            pg.ColumnSpacing = 6;
+            pg.BackgroundColor = [0.13, 0.13, 0.16];
+
+            % Row 1: Header row
+            hdr_lbl = uilabel(pg); hdr_lbl.Layout.Row = 1; hdr_lbl.Layout.Column = 1;
+            hdr_lbl.Text = 'Gain'; hdr_lbl.FontColor = [0.7, 0.7, 0.7]; hdr_lbl.FontWeight = 'bold';
+
+            m1_hdr = uilabel(pg); m1_hdr.Layout.Row = 1; m1_hdr.Layout.Column = 2;
+            m1_hdr.Text = 'Motor 1'; m1_hdr.FontColor = [0.35, 0.75, 1.0]; m1_hdr.FontWeight = 'bold'; m1_hdr.HorizontalAlignment = 'center';
+
+            m2_hdr = uilabel(pg); m2_hdr.Layout.Row = 1; m2_hdr.Layout.Column = 3;
+            m2_hdr.Text = 'Motor 2'; m2_hdr.FontColor = [1.0, 0.65, 0.2]; m2_hdr.FontWeight = 'bold'; m2_hdr.HorizontalAlignment = 'center';
+
+            % 7 parameter rows per RS02 manual:
+            % Row 2: Pos Kp (default 40.0)
+            % Row 3: Vel Kp (default 6.0)
+            % Row 4: Vel Ki (default 0.02)
+            % Row 5: Vel Filt (default 0.1)
+            % Row 6: Cur Kp (default 0.17)
+            % Row 7: Cur Ki (default 0.012)
+            % Row 8: Cur Filt (default 0.1)
+            gain_labels = {'Pos Kp', 'Vel Kp', 'Vel Ki', 'Vel Filt', 'Cur Kp', 'Cur Ki', 'Cur Filt'};
+            default_gains = [40.0, 6.0, 0.02, 0.1, 0.17, 0.012, 0.1];
+            m1_fields = cell(1, 7);
+            m2_fields = cell(1, 7);
+
+            for r = 1:7
+                lbl = uilabel(pg); lbl.Layout.Row = r + 1; lbl.Layout.Column = 1;
+                lbl.Text = gain_labels{r}; lbl.FontColor = [0.8, 0.8, 0.8]; lbl.FontSize = 11;
+                lbl.VerticalAlignment = 'center';
+
+                ef1 = uieditfield(pg, 'numeric');
+                ef1.Layout.Row = r + 1; ef1.Layout.Column = 2;
+                ef1.Value = default_gains(r); ef1.FontName = 'Courier New'; ef1.FontSize = 12;
+                ef1.BackgroundColor = [0.18, 0.18, 0.22]; ef1.FontColor = [1, 1, 1];
+                m1_fields{r} = ef1;
+
+                ef2 = uieditfield(pg, 'numeric');
+                ef2.Layout.Row = r + 1; ef2.Layout.Column = 3;
+                ef2.Value = default_gains(r); ef2.FontName = 'Courier New'; ef2.FontSize = 12;
+                ef2.BackgroundColor = [0.18, 0.18, 0.22]; ef2.FontColor = [1, 1, 1];
+                m2_fields{r} = ef2;
+            end
+
+            % Store field handles into obj.m1_* and obj.m2_*
+            obj.m1_kp_pos_field   = m1_fields{1};
+            obj.m1_kp_vel_field   = m1_fields{2};
+            obj.m1_ki_vel_field   = m1_fields{3};
+            obj.m1_kd_vel_field   = m1_fields{4};
+            obj.m1_kp_cur_field   = m1_fields{5};
+            obj.m1_ki_cur_field   = m1_fields{6};
+            obj.m1_filt_cur_field = m1_fields{7};
+
+            obj.m2_kp_pos_field   = m2_fields{1};
+            obj.m2_kp_vel_field   = m2_fields{2};
+            obj.m2_ki_vel_field   = m2_fields{3};
+            obj.m2_kd_vel_field   = m2_fields{4};
+            obj.m2_kp_cur_field   = m2_fields{5};
+            obj.m2_ki_cur_field   = m2_fields{6};
+            obj.m2_filt_cur_field = m2_fields{7};
+
+            % Row 9: Button grid with Read M1, Write M1, Read M2, Write M2
+            btn_grid = uigridlayout(pg, [1, 4]);
+            btn_grid.Layout.Row = 9;
+            btn_grid.Layout.Column = [1, 3];
+            btn_grid.ColumnWidth = {'1x', '1x', '1x', '1x'};
+            btn_grid.RowHeight = {'1x'};
+            btn_grid.Padding = [0, 0, 0, 0];
+
+            mid1 = 1;
+            mid2 = 2;
+            if ~isempty(obj.arm) && (isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID'))
+                mid1 = obj.arm.MOTOR_1_ID;
+            end
+            if ~isempty(obj.arm) && (isprop(obj.arm, 'MOTOR_2_ID') || isfield(obj.arm, 'MOTOR_2_ID'))
+                mid2 = obj.arm.MOTOR_2_ID;
+            end
+
+            br1 = uibutton(btn_grid, 'push'); br1.Layout.Row = 1; br1.Layout.Column = 1;
+            br1.Text = 'Read M1'; br1.BackgroundColor = [0.2, 0.35, 0.55]; br1.FontColor = [1, 1, 1]; br1.FontSize = 11;
+            br1.ButtonPushedFcn = @(~,~) obj.read_pid_to_panel(mid1);
+
+            bw1 = uibutton(btn_grid, 'push'); bw1.Layout.Row = 1; bw1.Layout.Column = 2;
+            bw1.Text = 'Write M1'; bw1.BackgroundColor = [0.2, 0.5, 0.3]; bw1.FontColor = [1, 1, 1]; bw1.FontSize = 11;
+            bw1.ButtonPushedFcn = @(~,~) obj.write_pid_from_panel(mid1);
+
+            br2 = uibutton(btn_grid, 'push'); br2.Layout.Row = 1; br2.Layout.Column = 3;
+            br2.Text = 'Read M2'; br2.BackgroundColor = [0.2, 0.35, 0.55]; br2.FontColor = [1, 1, 1]; br2.FontSize = 11;
+            br2.ButtonPushedFcn = @(~,~) obj.read_pid_to_panel(mid2);
+
+            bw2 = uibutton(btn_grid, 'push'); bw2.Layout.Row = 1; bw2.Layout.Column = 4;
+            bw2.Text = 'Write M2'; bw2.BackgroundColor = [0.2, 0.5, 0.3]; bw2.FontColor = [1, 1, 1]; bw2.FontSize = 11;
+            bw2.ButtonPushedFcn = @(~,~) obj.write_pid_from_panel(mid2);
+        end
+        
+        function build_limits_panel(obj)
+            lg = uigridlayout(obj.limits_panel, [7, 3]);
+            lg.ColumnWidth = {95, '1x', '1x'};
+            lg.RowHeight = {25, 36, 36, 36, 36, 36, 36};
+            lg.Padding = [10, 10, 10, 10];
+            lg.RowSpacing = 6;
+            lg.ColumnSpacing = 6;
+            lg.BackgroundColor = [0.13, 0.13, 0.16];
+
+            % Header row
+            hdr_lbl = uilabel(lg); hdr_lbl.Layout.Row=1; hdr_lbl.Layout.Column=1;
+            hdr_lbl.Text='Limit'; hdr_lbl.FontColor=[0.7,0.7,0.7]; hdr_lbl.FontWeight='bold';
+
+            m1_hdr = uilabel(lg); m1_hdr.Layout.Row=1; m1_hdr.Layout.Column=2;
+            m1_hdr.Text='Motor 1'; m1_hdr.FontColor=[0.35,0.75,1.0]; m1_hdr.FontWeight='bold'; m1_hdr.HorizontalAlignment='center';
+
+            m2_hdr = uilabel(lg); m2_hdr.Layout.Row=1; m2_hdr.Layout.Column=3;
+            m2_hdr.Text='Motor 2'; m2_hdr.FontColor=[1.0,0.65,0.2]; m2_hdr.FontWeight='bold'; m2_hdr.HorizontalAlignment='center';
+
+            % 5 limit rows: Pos Min, Pos Max, Max Vel, Max Phase Cur, Max Torque
+            limit_labels = {'Pos Min (deg)', 'Pos Max (deg)', 'Max Vel (deg/s)', 'Max Phase Cur (A)', 'Max Torque (Nm)'};
+            m1_fields = cell(1, 5);
+            m2_fields = cell(1, 5);
+            lbl_handles = cell(1, 5);
+
+            for r = 1:5
+                lbl = uilabel(lg); lbl.Layout.Row=r+1; lbl.Layout.Column=1;
+                lbl.Text=limit_labels{r}; lbl.FontColor=[0.8,0.8,0.8]; lbl.FontSize=11;
+                lbl.VerticalAlignment='center';
+                lbl_handles{r} = lbl;
+
+                ef1 = uieditfield(lg, 'numeric');
+                ef1.Layout.Row=r+1; ef1.Layout.Column=2;
+                ef1.Value=0; ef1.FontName='Courier New'; ef1.FontSize=12;
+                ef1.BackgroundColor=[0.18,0.18,0.22]; ef1.FontColor=[1,1,1];
+                m1_fields{r} = ef1;
+
+                ef2 = uieditfield(lg, 'numeric');
+                ef2.Layout.Row=r+1; ef2.Layout.Column=3;
+                ef2.Value=0; ef2.FontName='Courier New'; ef2.FontSize=12;
+                ef2.BackgroundColor=[0.18,0.18,0.22]; ef2.FontColor=[1,1,1];
+                m2_fields{r} = ef2;
+            end
+
+            % Store label handles for dynamic unit switching
+            obj.lbl_lim_pos_min = lbl_handles{1};
+            obj.lbl_lim_pos_max = lbl_handles{2};
+            obj.lbl_lim_vel     = lbl_handles{3};
+
+            % Store field handles with unconstrained limits to accept any motor value safely
+            obj.m1_pos_min_field = m1_fields{1}; obj.m1_pos_min_field.Limits = [-Inf, Inf];
+            obj.m1_pos_max_field = m1_fields{2}; obj.m1_pos_max_field.Limits = [-Inf, Inf];
+            obj.m1_vel_lim_field = m1_fields{3}; obj.m1_vel_lim_field.Limits = [-Inf, Inf];
+            obj.m1_cur_lim_field = m1_fields{4}; obj.m1_cur_lim_field.Limits = [-Inf, Inf];
+            obj.m1_tor_lim_field = m1_fields{5}; obj.m1_tor_lim_field.Limits = [-Inf, Inf];
+            obj.m2_pos_min_field = m2_fields{1}; obj.m2_pos_min_field.Limits = [-Inf, Inf];
+            obj.m2_pos_max_field = m2_fields{2}; obj.m2_pos_max_field.Limits = [-Inf, Inf];
+            obj.m2_vel_lim_field = m2_fields{3}; obj.m2_vel_lim_field.Limits = [-Inf, Inf];
+            obj.m2_cur_lim_field = m2_fields{4}; obj.m2_cur_lim_field.Limits = [-Inf, Inf];
+            obj.m2_tor_lim_field = m2_fields{5}; obj.m2_tor_lim_field.Limits = [-Inf, Inf];
+
+            % Default velocity limit to 1718 deg/s (30 rad/s)
+            obj.m1_vel_lim_field.Value = 1718.0;
+            obj.m2_vel_lim_field.Value = 1718.0;
+            obj.m1_cur_lim_field.Value = 10.0;
+            obj.m2_cur_lim_field.Value = 10.0;
+            obj.m1_tor_lim_field.Value = 12.0;
+            obj.m2_tor_lim_field.Value = 12.0;
+
+            % Populate initial joint limit values if arm exists (converted to deg)
+            if ~isempty(obj.arm)
+                jl = [];
+                if isprop(obj.arm, 'JOINT_LIMITS') || isfield(obj.arm, 'JOINT_LIMITS')
+                    jl = obj.arm.JOINT_LIMITS;
+                end
+                if isstruct(jl)
+                    try
+                        if isfield(jl, 'm1_min'), obj.m1_pos_min_field.Value = round(jl.m1_min * (180 / pi), 1); end
+                        if isfield(jl, 'm1_max'), obj.m1_pos_max_field.Value = round(jl.m1_max * (180 / pi), 1); end
+                        if isfield(jl, 'm2_min'), obj.m2_pos_min_field.Value = round(jl.m2_min * (180 / pi), 1); end
+                        if isfield(jl, 'm2_max'), obj.m2_pos_max_field.Value = round(jl.m2_max * (180 / pi), 1); end
+                    catch
+                    end
+                end
+            end
+
+            % Row 7: Read/Write buttons
+            btn_grid = uigridlayout(lg, [1,4]);
+            btn_grid.Layout.Row = 7;
+            btn_grid.Layout.Column = [1,3];
+            btn_grid.ColumnWidth = {'1x','1x','1x','1x'};
+            btn_grid.RowHeight = {'1x'};
+            btn_grid.Padding = [0,0,0,0];
+
+            mid1 = 1;
+            mid2 = 2;
+            if ~isempty(obj.arm) && (isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID'))
+                mid1 = obj.arm.MOTOR_1_ID;
+            end
+            if ~isempty(obj.arm) && (isprop(obj.arm, 'MOTOR_2_ID') || isfield(obj.arm, 'MOTOR_2_ID'))
+                mid2 = obj.arm.MOTOR_2_ID;
+            end
+
+            br1 = uibutton(btn_grid,'push'); br1.Layout.Row=1; br1.Layout.Column=1;
+            br1.Text='Read M1'; br1.BackgroundColor=[0.2,0.35,0.55]; br1.FontColor=[1,1,1]; br1.FontSize=11;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

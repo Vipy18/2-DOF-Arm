@@ -1,0 +1,391 @@
+function update(obj)
+            % Called by 25 Hz timer: updates telemetry values, threshold colors, arm plot, and oscilloscope
+            try
+                if isempty(obj.fig) || ~isgraphics(obj.fig)
+                    return;
+                end
+                if isempty(obj.arm) || (~isprop(obj.arm, 'Telemetry') && ~isfield(obj.arm, 'Telemetry')) || isempty(obj.arm.Telemetry)
+                    return;
+                end
+                
+                telem = obj.arm.Telemetry;
+                th1 = 0;
+                th2 = 0;
+                
+                % Update Motor 1
+                if isfield(telem, 'm1') && ~isempty(telem.m1)
+                    m1 = telem.m1;
+                    if isfield(m1, 'position')
+                        th1 = m1.position;
+                        obj.m1_pos_rad_lbl.Text = sprintf('%.3f rad', th1);
+                        obj.m1_pos_deg_lbl.Text = sprintf('%.1f°', th1 * (180 / pi));
+                    end
+                    if isfield(m1, 'velocity')
+                        obj.m1_vel_lbl.Text = sprintf('%.2f rad/s', m1.velocity);
+                    end
+                    if isfield(m1, 'current')
+                        cur1 = m1.current;
+                        obj.m1_cur_lbl.Text = sprintf('%.2f A', cur1);
+                        if abs(cur1) > 4.5
+                            obj.m1_cur_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>4.5A)
+                        elseif abs(cur1) > 3.0
+                            obj.m1_cur_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>3.0A)
+                        else
+                            obj.m1_cur_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m1, 'voltage')
+                        obj.m1_volt_lbl.Text = sprintf('%.1f V', m1.voltage);
+                    end
+                    if isfield(m1, 'temperature')
+                        temp1 = m1.temperature;
+                        obj.m1_temp_lbl.Text = sprintf('%.1f °C', temp1);
+                        if temp1 > 80
+                            obj.m1_temp_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>80C)
+                        elseif temp1 > 60
+                            obj.m1_temp_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>60C)
+                        else
+                            obj.m1_temp_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m1, 'fault_str')
+                        fstr1 = string(m1.fault_str);
+                        obj.m1_fault_lbl.Text = char(fstr1);
+                        if ~strcmpi(strtrim(fstr1), "OK") && ~strcmpi(strtrim(fstr1), "None") && strlength(strtrim(fstr1)) > 0
+                            obj.m1_fault_lbl.BackgroundColor = [0.85, 0.15, 0.15]; % Red on fault
+                            obj.m1_fault_lbl.FontColor = [1.0, 1.0, 1.0];
+                        else
+                            obj.m1_fault_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+                            obj.m1_fault_lbl.FontColor = [0.4, 1.0, 0.4]; % Green on OK
+                        end
+                    end
+                end
+                
+                % Update Motor 2
+                if isfield(telem, 'm2') && ~isempty(telem.m2)
+                    m2 = telem.m2;
+                    if isfield(m2, 'position')
+                        th2 = m2.position;
+                        obj.m2_pos_rad_lbl.Text = sprintf('%.3f rad', th2);
+                        obj.m2_pos_deg_lbl.Text = sprintf('%.1f°', th2 * (180 / pi));
+                    end
+                    if isfield(m2, 'velocity')
+                        obj.m2_vel_lbl.Text = sprintf('%.2f rad/s', m2.velocity);
+                    end
+                    if isfield(m2, 'current')
+                        cur2 = m2.current;
+                        obj.m2_cur_lbl.Text = sprintf('%.2f A', cur2);
+                        if abs(cur2) > 4.5
+                            obj.m2_cur_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>4.5A)
+                        elseif abs(cur2) > 3.0
+                            obj.m2_cur_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>3.0A)
+                        else
+                            obj.m2_cur_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m2, 'voltage')
+                        obj.m2_volt_lbl.Text = sprintf('%.1f V', m2.voltage);
+                    end
+                    if isfield(m2, 'temperature')
+                        temp2 = m2.temperature;
+                        obj.m2_temp_lbl.Text = sprintf('%.1f °C', temp2);
+                        if temp2 > 80
+                            obj.m2_temp_lbl.FontColor = [1.0, 0.25, 0.25]; % Red (>80C)
+                        elseif temp2 > 60
+                            obj.m2_temp_lbl.FontColor = [1.0, 0.85, 0.0];  % Yellow (>60C)
+                        else
+                            obj.m2_temp_lbl.FontColor = [1.0, 1.0, 1.0];   % White normal
+                        end
+                    end
+                    if isfield(m2, 'fault_str')
+                        fstr2 = string(m2.fault_str);
+                        obj.m2_fault_lbl.Text = char(fstr2);
+                        if ~strcmpi(strtrim(fstr2), "OK") && ~strcmpi(strtrim(fstr2), "None") && strlength(strtrim(fstr2)) > 0
+                            obj.m2_fault_lbl.BackgroundColor = [0.85, 0.15, 0.15]; % Red on fault
+                            obj.m2_fault_lbl.FontColor = [1.0, 1.0, 1.0];
+                        else
+                            obj.m2_fault_lbl.BackgroundColor = [0.18, 0.18, 0.22];
+                            obj.m2_fault_lbl.FontColor = [0.4, 1.0, 0.4]; % Green on OK
+                        end
+                    end
+                end
+                
+                % Update Live Oscilloscope
+                obj.update_oscilloscope(telem);
+                
+                % Redraw arm visualization
+                obj.redraw_arm(th1, th2);
+                
+            catch
+                % Silently return on error
+                return;
+            end
+        end
+        
+        function estop(obj)
+            % Synchronous Emergency Stop: instantly disables both motors and alerts
+            try
+                if ~isempty(obj.arm)
+                    m1_id = 1;
+                    m2_id = 2;
+                    if isprop(obj.arm, 'MOTOR_1_ID') && ~isempty(obj.arm.MOTOR_1_ID)
+                        m1_id = obj.arm.MOTOR_1_ID;
+                    end
+                    if isprop(obj.arm, 'MOTOR_2_ID') && ~isempty(obj.arm.MOTOR_2_ID)
+                        m2_id = obj.arm.MOTOR_2_ID;
+                    end
+                    try
+                        obj.arm.disable_motor(m1_id);
+                    catch e1
+                        warning('ArmMonitor:estop_m1', 'Failed to disable M1: %s', e1.message);
+                    end
+                    try
+                        obj.arm.disable_motor(m2_id);
+                    catch e2
+                        warning('ArmMonitor:estop_m2', 'Failed to disable M2: %s', e2.message);
+                    end
+                end
+            catch e
+                warning('ArmMonitor:estop', 'Error executing E-STOP: %s', e.message);
+            end
+            
+            % Display warning dialog
+            try
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, 'EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP', 'Icon', 'error');
+                else
+                    errordlg('EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP');
+                end
+            catch
+                errordlg('EMERGENCY STOP ACTIVATED', 'EMERGENCY STOP');
+            end
+        end
+        
+        function reconnect(obj)
+            % Reconnects / Re-enables motors after E-STOP or connection reset
+            try
+                if isempty(obj.arm)
+                    warning('ArmMonitor:reconnect', 'No ArmControl object attached.');
+                    return;
+                end
+                
+                % Re-open serial port if closed
+                if isempty(obj.arm.s) || ~isvalid(obj.arm.s)
+                    disp('Re-opening serial connection...');
+                    obj.arm.connect();
+                end
+                
+                m1_id = obj.arm.MOTOR_1_ID;
+                m2_id = obj.arm.MOTOR_2_ID;
+                
+                % Query selected control mode from UI
+                mode_str = 'Position';
+                if ~isempty(obj.mode_dropdown) && isvalid(obj.mode_dropdown)
+                    mode_str = obj.mode_dropdown.Value;
+                end
+                
+                % Re-configure and re-enable motors
+                for mid = [m1_id, m2_id]
+                    obj.arm.disable_timeout(mid);
+                    switch mode_str
+                        case 'Position', obj.arm.set_position_mode(mid);
+                        case 'Velocity', obj.arm.set_velocity_mode(mid);
+                        case 'Current',  obj.arm.set_current_mode(mid);
+                    end
+                    obj.arm.enable_motor(mid);
+                    obj.arm.set_current_limit(mid, 5.0);
+                    pause(0.05);
+                end
+                
+                % Restart telemetry polling timer
+                obj.arm.start_telemetry(20);
+                
+                fprintf('Motors re-enabled in %s mode and telemetry restarted.\n', mode_str);
+                
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, sprintf('Motors re-enabled in %s mode.\nTelemetry active.', mode_str), ...
+                            'Motors Re-enabled', 'Icon', 'success');
+                end
+            catch e
+                warning('ArmMonitor:reconnect', 'Reconnection failed: %s', e.message);
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    uialert(obj.fig, sprintf('Reconnection failed:\n%s', e.message), ...
+                            'Reconnection Error', 'Icon', 'error');
+                end
+            end
+        end
+        
+        function close_cb(obj)
+            % Close callback: stops timer, stops telemetry, and deletes figure
+            try
+                if ~isempty(obj.update_timer) && isvalid(obj.update_timer)
+                    stop(obj.update_timer);
+                    delete(obj.update_timer);
+                    obj.update_timer = [];
+                end
+            catch
+            end
+            
+            try
+                if ~isempty(obj.arm) && (ismethod(obj.arm, 'stop_telemetry') || isprop(obj.arm, 'stop_telemetry'))
+                    obj.arm.stop_telemetry();
+                end
+            catch
+            end
+            
+            try
+                if ~isempty(obj.fig) && isgraphics(obj.fig)
+                    delete(obj.fig);
+                end
+            catch
+            end
+        end
+        
+        function delete(obj)
+            % Handle destructor to guarantee timer cleanup
+            obj.close_cb();
+        end
+
+        function read_limits_to_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                % Read joint limits from obj.arm.JOINT_LIMITS
+                jl = [];
+                if isprop(obj.arm, 'JOINT_LIMITS') || isfield(obj.arm, 'JOINT_LIMITS')
+                    jl = obj.arm.JOINT_LIMITS;
+                end
+                if isstruct(jl)
+                    if is_m1
+                        if isfield(jl, 'm1_min'), obj.m1_pos_min_field.Value = jl.m1_min; end
+                        if isfield(jl, 'm1_max'), obj.m1_pos_max_field.Value = jl.m1_max; end
+                    else
+                        if isfield(jl, 'm2_min'), obj.m2_pos_min_field.Value = jl.m2_min; end
+                        if isfield(jl, 'm2_max'), obj.m2_pos_max_field.Value = jl.m2_max; end
+                    end
+                end
+
+                % Read velocity, current, and torque limits from motor
+                has_read_limits = ismethod(obj.arm, 'read_limits') || ...
+                    (isfield(obj.arm, 'read_limits') && isa(obj.arm.read_limits, 'function_handle'));
+                if has_read_limits
+                    limits = obj.arm.read_limits(motor_id);
+                    vel_val = NaN;
+                    cur_val = NaN;
+                    tor_val = NaN;
+                    if isstruct(limits)
+                        if isfield(limits, 'limit_spd') && ~isnan(limits.limit_spd)
+                            vel_val = limits.limit_spd;
+                        elseif isfield(limits, 'vel_lim') && ~isnan(limits.vel_lim)
+                            vel_val = limits.vel_lim;
+                        elseif isfield(limits, 'max_vel') && ~isnan(limits.max_vel)
+                            vel_val = limits.max_vel;
+                        end
+                        if isfield(limits, 'limit_cur') && ~isnan(limits.limit_cur)
+                            cur_val = limits.limit_cur;
+                        elseif isfield(limits, 'cur_lim') && ~isnan(limits.cur_lim)
+                            cur_val = limits.cur_lim;
+                        elseif isfield(limits, 'max_cur') && ~isnan(limits.max_cur)
+                            cur_val = limits.max_cur;
+                        end
+                        if isfield(limits, 'limit_torque') && ~isnan(limits.limit_torque)
+                            tor_val = limits.limit_torque;
+                        elseif isfield(limits, 'torque_lim') && ~isnan(limits.torque_lim)
+                            tor_val = limits.torque_lim;
+                        elseif isfield(limits, 'max_torque') && ~isnan(limits.max_torque)
+                            tor_val = limits.max_torque;
+                        end
+                    elseif isnumeric(limits) && length(limits) >= 3
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                        tor_val = limits(3);
+                    elseif isnumeric(limits) && length(limits) >= 2
+                        vel_val = limits(1);
+                        cur_val = limits(2);
+                    end
+
+                    if is_m1
+                        if ~isnan(vel_val), obj.m1_vel_lim_field.Value = vel_val; end
+                        if ~isnan(cur_val), obj.m1_cur_lim_field.Value = cur_val; end
+                        if ~isnan(tor_val), obj.m1_tor_lim_field.Value = tor_val; end
+                    else
+                        if ~isnan(vel_val), obj.m2_vel_lim_field.Value = vel_val; end
+                        if ~isnan(cur_val), obj.m2_cur_lim_field.Value = cur_val; end
+                        if ~isnan(tor_val), obj.m2_tor_lim_field.Value = tor_val; end
+                    end
+                end
+            catch e
+                warning('ArmMonitor:readLimits', 'Could not read limits: %s', e.message);
+            end
+        end
+
+        function write_limits_from_panel(obj, motor_id)
+            try
+                if isempty(obj.arm)
+                    return;
+                end
+
+                is_m1 = (motor_id == 1);
+                if isprop(obj.arm, 'MOTOR_1_ID') || isfield(obj.arm, 'MOTOR_1_ID')
+                    is_m1 = (motor_id == obj.arm.MOTOR_1_ID);
+                end
+
+                if is_m1
+                    min_val = obj.m1_pos_min_field.Value;
+                    max_val = obj.m1_pos_max_field.Value;
+                    vel_val = obj.m1_vel_lim_field.Value;
+                    cur_val = obj.m1_cur_lim_field.Value;
+                    tor_val = obj.m1_tor_lim_field.Value;
+                else
+                    min_val = obj.m2_pos_min_field.Value;
+                    max_val = obj.m2_pos_max_field.Value;
+                    vel_val = obj.m2_vel_lim_field.Value;
+                    cur_val = obj.m2_cur_lim_field.Value;
+                    tor_val = obj.m2_tor_lim_field.Value;
+                end
+
+                % Clamp safety limits
+                if min_val > max_val
+                    tmp = min_val;
+                    min_val = max_val;
+                    max_val = tmp;
+                end
+                vel_val = max(0, min(30, vel_val));
+                cur_val = max(0, min(12, cur_val));
+                tor_val = max(0, min(12, tor_val));
+
+                % Update UI fields with clamped values
+                if is_m1
+                    obj.m1_pos_min_field.Value = min_val;
+                    obj.m1_pos_max_field.Value = max_val;
+                    obj.m1_vel_lim_field.Value = vel_val;
+                    obj.m1_cur_lim_field.Value = cur_val;
+                    obj.m1_tor_lim_field.Value = tor_val;
+                else
+                    obj.m2_pos_min_field.Value = min_val;
+                    obj.m2_pos_max_field.Value = max_val;
+                    obj.m2_vel_lim_field.Value = vel_val;
+                    obj.m2_cur_lim_field.Value = cur_val;
+                    obj.m2_tor_lim_field.Value = tor_val;
+                end
+
+                obj.arm.set_joint_limits(motor_id, min_val, max_val);
+                obj.arm.set_velocity_limit(motor_id, vel_val);
+                obj.arm.set_current_limit(motor_id, cur_val);
+                obj.arm.set_torque_limit(motor_id, tor_val);
+                fprintf('Limits written to Motor %d.\n', motor_id);
+            catch e
+                warning('ArmMonitor:writeLimits', 'Could not write limits: %s', e.message);
+            end
+        end
+    end
+    
+    methods (Access = private)
+        
