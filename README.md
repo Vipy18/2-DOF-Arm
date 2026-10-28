@@ -24,6 +24,8 @@ Robstride provides a multi-platform control and simulation environment for a 2-l
 
 ## 2. Repository Layout
 
+All source files are strictly partitioned into dedicated directories — the root directory contains only project-level metadata:
+
 ```
 d:\PRJ\Robstride\
 ├── matlab/                 # Primary industrial Mission Control & Telemetry GUI
@@ -33,7 +35,15 @@ d:\PRJ\Robstride\
 │   ├── run_arm_live.m      # Production live hardware launcher (COM20 @ 921600 baud)
 │   ├── run_arm_example.m   # Offline simulation & demo script
 │   ├── run_verification.m  # Automated offline UI & logic assertion suite
-│   └── test_*.m            # Unit tests (kinematics, trajectory, layout, unwrapping)
+│   ├── test_*.m            # Unit tests (kinematics, trajectory, layout, unwrapping)
+│   └── scratch/            # Isolation test fixtures for UI scrolling (test_scroll*.m)
+├── python/                 # Python dynamics engine, CLI drivers, and calculators
+│   ├── torque_math.py      # Core 2-DOF analytical Lagrangian torque & inertia calculation engine
+│   ├── test_torque_math.py # Unit tests for torque formulas & pose validation
+│   ├── run_motor.py        # Standalone single-motor CAN CLI control script
+│   ├── oscillate_motors.py # Standalone dual-motor oscillation & CAN heartbeat check
+│   ├── web/                # Web dashboard & Tkinter GUI (app.py, torque_ui.py, templates/)
+│   └── scratch/            # Builder scaffolding and orchestration scripts
 ├── Handover/               # Self-contained, audited handover bundle for incoming engineers
 │   ├── src/                # Clean source snapshot (MATLAB, Motor Studio, Agents, manuals)
 │   ├── PROJECT_DESCRIPTION.md # Complete architectural and system specification
@@ -48,12 +58,8 @@ d:\PRJ\Robstride\
 │   ├── Agents_Rules.md     # Multi-agent behavioral contract
 │   └── Workspace_Structure.md # Canonical architectural and topological map
 ├── ArmControlApp/          # Desktop application (Electron 28 + Vite 5 + React 18 + TypeScript)
-├── templates/              # HTML frontend templates for web calculator
-├── torque_math.py          # Core 2-DOF analytical Lagrangian torque & inertia calculation engine
-├── test_torque_math.py     # 11 unit tests for torque formulas & pose validation
-├── run_motor.py            # Standalone single-motor CAN CLI control script
-├── oscillate_motors.py     # Standalone dual-motor oscillation & CAN heartbeat check
-└── app.py                  # Flask web dashboard entry point (port 5000)
+├── README.md               # Project documentation and directory map
+└── .gitignore              # Repository exclusions (node_modules, build artifacts, etc.)
 ```
 
 ---
@@ -94,12 +100,15 @@ python -m venv .venv
 # 2. Install dependencies
 pip install pyserial pytest numpy
 
-# 3. Run torque math test suite (11 analytical tests)
-pytest test_torque_math.py
+# 3. Run torque math unit tests (10 analytical tests)
+python -m unittest python/test_torque_math.py
 
 # 4. Hardware smoke test (connect USB-to-CAN adapter to COM20)
-python run_motor.py
-python oscillate_motors.py
+python python/run_motor.py
+python python/oscillate_motors.py
+
+# 5. (Optional) Run local web calculator dashboard
+python python/web/app.py
 ```
 
 ### MATLAB Mission Control
@@ -124,21 +133,12 @@ run_arm_live
 
 ---
 
-## 5. Why are `.m` and `.py` Files in the Root Directory?
+## 5. Directory Organization & File History
 
-This repository progressed through distinct development phases, leaving specialized entry points at the root:
+To maintain a clean repository root, all source files were relocated to functional directories:
 
-1. **Origin of Root `.py` Files** (`torque_math.py`, `run_motor.py`, `oscillate_motors.py`, `app.py`):
-   * The project began as a standalone Python rigid-body physics engine (`torque_math.py`) and direct USB-to-CAN hardware verification scripts (`run_motor.py`, `oscillate_motors.py`).
-   * `app.py` and `torque_ui.py` served as early interactive UI prototypes for kinematics verification before the industrial MATLAB mission control was architected.
-   * `torque_math.py` remains the authoritative analytical reference for 2-DOF multi-body dynamics.
-
-2. **Origin of Root `.m` Files** (`test_scroll.m` to `test_scroll4.m`):
-   * During the implementation of `ArmMonitor.m`, MATLAB's native `uigridlayout` exhibited a known clipping bug where nested panels failed to scroll vertically.
-   * `test_scroll.m` through `test_scroll4.m` were created as rapid isolation test fixtures to prototype the 3-layer panel hierarchy (`master_grid` $\to$ `scroll_panel` $\to$ `canvas_panel`).
-   * The finalized, robust layout was integrated into `matlab/ArmMonitor.m` and unit-tested in `matlab/test_armmonitor_layout.m`.
-
-3. **Origin of Root `build_*.py` Files**:
-   * Scaffolding scripts used during early frontend code generation for component templates.
-
-> **Clean Production Snapshot**: If you want a completely clean, uncluttered directory structure containing only the production MATLAB suite, Motor Studio, and core dynamics engine without historical scratch scripts, use the [`Handover/src/`](file:///d:/PRJ/Robstride/Handover/src/) folder.
+* **`python/`**: Houses the core physics model (`torque_math.py`) and standalone CLI hardware drivers (`run_motor.py`, `oscillate_motors.py`).
+* **`python/web/`**: Houses the Flask web dashboard (`app.py`), HTML templates, and standalone Tkinter calculator (`torque_ui.py`).
+* **`python/scratch/`**: Houses legacy template builders (`build_*.py`, `update_html.py`) and multi-agent runner scripts (`run_orchestration.py`).
+* **`matlab/scratch/`**: Houses historical scroll-bug isolation test fixtures (`test_scroll*.m`) used during `ArmMonitor` UI development.
+* **`Handover/src/`**: Self-contained snapshot containing exclusively production files (MATLAB suite, Motor Studio, Agents hub, physics engine, and hardware PDF manuals).

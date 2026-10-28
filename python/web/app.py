@@ -11,10 +11,12 @@ from typing import Any, Dict
 
 from flask import Flask, jsonify, render_template, request
 
-# Ensure local modules are importable
+# Ensure local and parent python modules are importable
 current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
+parent_dir = os.path.dirname(current_dir)
+for d in (current_dir, parent_dir):
+    if d not in sys.path:
+        sys.path.insert(0, d)
 
 from torque_math import (
     DEFAULT_BASE_ANGULAR_ACCEL,
