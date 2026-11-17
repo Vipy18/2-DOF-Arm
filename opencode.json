@@ -1,0 +1,97 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "coder_flash",
+  "provider": {
+    "google-gemini": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Google Gemini",
+      "options": {
+        "baseURL": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "apiKey": "{env:GEMINI_API_KEY}"
+      },
+      "models": {
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "reasoning": true,
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          }
+        }
+      }
+    },
+    "nvidia-nim": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NVIDIA NIM",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "apiKey": "{env:NVIDIA_API_KEY}"
+      },
+      "models": {
+        "nvidia/llama-3.1-nemotron-70b-instruct": {
+          "name": "Nemotron 70B Instruct",
+          "reasoning": true,
+          "limit": {
+            "context": 131072,
+            "output": 4096
+          }
+        },
+        "nvidia/nemotron-4-340b-instruct": {
+          "name": "Nemotron 340B Instruct",
+          "reasoning": true,
+          "limit": {
+            "context": 4096,
+            "output": 4096
+          }
+        }
+      }
+    }
+  },
+  "agents": {
+    "coder_flash": {
+      "mode": "all",
+      "model": "google-gemini/gemini-3.8-flash",
+      "instructions": "Execute source code generation, bug fixes, and unit tests. Do not add superfluous comments.",
+      "permission": {
+        "edit": "allow",
+        "write": "allow",
+        "read": "allow",
+        "bash": {
+          "": "ask",
+          "npm test*": "allow",
+          "npm run build*": "allow",
+          "git status": "allow",
+          "git diff*": "allow"
+        }
+      }
+    },
+    "logic_auditor_nemotron": {
+      "mode": "subagent",
+      "model": "nvidia-nim/nvidia/llama-3.1-nemotron-70b-instruct",
+      "instructions": "Adversarial logic verification. Review edge cases, invariant preservation, and race conditions. Read-only.",
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "read": "allow",
+        "bash": {
+          "": "deny",
+          "pytest*": "allow",
+          "npm test*": "allow"
+        }
+      }
+    },
+    "security_auditor_nemotron": {
+      "mode": "subagent",
+      "model": "nvidia-nim/nvidia/nemotron-4-340b-instruct",
+      "instructions": "Audit code for OWASP vulnerabilities, credential leakage, and insecure deserialization. Read-only.",
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "read": "allow",
+        "bash": {
+          "": "deny"
+        }
+      }
+    }
+  }
+}
