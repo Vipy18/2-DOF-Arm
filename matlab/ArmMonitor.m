@@ -9,8 +9,8 @@ classdef ArmMonitor < handle
         has_synced_initial_state = false  % True once position input fields are synced with present motor angles
         
         % Link lengths in mm
-        L1 = 400
-        L2 = 300
+        L1 = 233.19
+        L2 = 208.19
         
         % Top bar elements
         lbl_title
