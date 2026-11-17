@@ -1,4 +1,4 @@
-# Robstride 2-DOF Robotic Arm Control & Dynamics Suite
+﻿# Robstride 2-DOF Robotic Arm Control & Dynamics Suite
 
 Industrial control, kinematics analysis, telemetry streaming, and rigid-body dynamics for a 2-DOF planar robotic arm powered by **Robstride RS02** brushless smart actuators.
 
@@ -24,42 +24,39 @@ Robstride provides a multi-platform control and simulation environment for a 2-l
 
 ## 2. Repository Layout
 
-All source files are strictly partitioned into dedicated directories — the root directory contains only project-level metadata:
+All source files are strictly partitioned into dedicated directories â€” the root directory contains only project-level metadata:
 
 ```
 d:\PRJ\Robstride\
-├── matlab/                 # Primary industrial Mission Control & Telemetry GUI
-│   ├── ArmControl.m        # Core motor controller, CAN driver, and kinematics class
-│   ├── ArmMonitor.m        # 5-column Mission Control UI (oscilloscope, visualizer, CSV logger)
-│   ├── ArmTuner.m          # Single-joint PID step-response & Ziegler-Nichols tuning
-│   ├── run_arm_live.m      # Production live hardware launcher (COM20 @ 921600 baud)
-│   ├── run_arm_example.m   # Offline simulation & demo script
-│   ├── run_verification.m  # Automated offline UI & logic assertion suite
-│   ├── test_*.m            # Unit tests (kinematics, trajectory, layout, unwrapping)
-│   └── scratch/            # Isolation test fixtures for UI scrolling (test_scroll*.m)
-├── python/                 # Python dynamics engine, CLI drivers, and calculators
-│   ├── torque_math.py      # Core 2-DOF analytical Lagrangian torque & inertia calculation engine
-│   ├── test_torque_math.py # Unit tests for torque formulas & pose validation
-│   ├── run_motor.py        # Standalone single-motor CAN CLI control script
-│   ├── oscillate_motors.py # Standalone dual-motor oscillation & CAN heartbeat check
-│   ├── web/                # Web dashboard & Tkinter GUI (app.py, torque_ui.py, templates/)
-│   └── scratch/            # Builder scaffolding and orchestration scripts
-├── Handover/               # Self-contained, audited handover bundle for incoming engineers
-│   ├── src/                # Clean source snapshot (MATLAB, Motor Studio, Agents, manuals)
-│   ├── PROJECT_DESCRIPTION.md # Complete architectural and system specification
-│   ├── HANDOVER_GUIDE.md   # Developer roadmap, conventions, known traps, and guidelines
+â”œâ”€â”€ matlab/                 # Primary industrial Mission Control & Telemetry GUI
+â”‚   â”œâ”€â”€ ArmControl.m        # Core motor controller, CAN driver, and kinematics class
+â”‚   â”œâ”€â”€ ArmMonitor.m        # 5-column Mission Control UI (oscilloscope, visualizer, CSV logger)
+â”‚   â”œâ”€â”€ ArmTuner.m          # Single-joint PID step-response & Ziegler-Nichols tuning
+â”‚   â”œâ”€â”€ run_arm_live.m      # Production live hardware launcher (COM20 @ 921600 baud)
+â”‚   â”œâ”€â”€ run_arm_example.m   # Offline simulation & demo script
+â”‚   â”œâ”€â”€ run_verification.m  # Automated offline UI & logic assertion suite
+â”‚   â”œâ”€â”€ test_*.m            # Unit tests (kinematics, trajectory, layout, unwrapping)
+â”‚   â””â”€â”€ scratch/            # Isolation test fixtures for UI scrolling (test_scroll*.m)
+â”œâ”€â”€ python/                 # Python dynamics engine, CLI drivers, and calculators
+â”‚   â”œâ”€â”€ torque_math.py      # Core 2-DOF analytical Lagrangian torque & inertia calculation engine
+â”‚   â”œâ”€â”€ test_torque_math.py # Unit tests for torque formulas & pose validation
+â”‚   â”œâ”€â”€ run_motor.py        # Standalone single-motor CAN CLI control script
+â”‚   â”œâ”€â”€ oscillate_motors.py # Standalone dual-motor oscillation & CAN heartbeat check
+â”‚   â”œâ”€â”€ web/                # Web dashboard & Tkinter GUI (app.py, torque_ui.py, templates/)
+â”‚   â””â”€â”€ scratch/            # Builder scaffolding and orchestration scripts
+├── docs/                   # Project knowledge transfer, specifications, and prerequisites
+│   ├── PROJECT_KNOWLEDGE_TRANSFER.md # Comprehensive project information & knowledge transfer
 │   ├── PREREQUISITES.md    # Host hardware, runtime dependencies, and verification steps
 │   └── .handover_manifest.json # Subagent execution and verification audit trail
-├── MotorStudio/            # Robstride official motor commissioning & parameter tuning tool
-│   └── motor_toolV14L/     # Unpacked executable (motor_tool.exe) and Qt runtime DLLs
-├── Agents/                 # Multi-agent coordination hub (.agents/ junction link)
-│   ├── comm.md             # Standardized inter-agent message bus
-│   ├── tasks.md            # Central task board with verification audit logs
-│   ├── Agents_Rules.md     # Multi-agent behavioral contract
-│   └── Workspace_Structure.md # Canonical architectural and topological map
-├── ArmControlApp/          # Desktop application (Electron 28 + Vite 5 + React 18 + TypeScript)
-├── README.md               # Project documentation and directory map
-└── .gitignore              # Repository exclusions (node_modules, build artifacts, etc.)
+â”œâ”€â”€ MotorStudio/            # Robstride official motor commissioning & parameter tuning tool
+â”‚   â””â”€â”€ motor_toolV14L/     # Unpacked executable (motor_tool.exe) and Qt runtime DLLs
+â”œâ”€â”€ Agents/                 # Multi-agent coordination hub (.agents/ junction link)
+â”‚   â”œâ”€â”€ comm.md             # Standardized inter-agent message bus
+â”‚   â”œâ”€â”€ tasks.md            # Central task board with verification audit logs
+â”‚   â”œâ”€â”€ Agents_Rules.md     # Multi-agent behavioral contract
+â”‚   â””â”€â”€ Workspace_Structure.md # Canonical architectural and topological map
+â”œâ”€â”€ README.md               # Project documentation and directory map
+â””â”€â”€ .gitignore              # Repository exclusions (node_modules, build artifacts, etc.)
 ```
 
 ---
@@ -70,15 +67,15 @@ d:\PRJ\Robstride\
 |---|---|---|---|---|
 | Base Link Length | $L_1$ | 400 | mm | Center-to-center distance from base to elbow |
 | Fore Link Length | $L_2$ | 300 | mm | Center-to-center distance from elbow to TCP |
-| Gravitational Acceleration | $g$ | 9.81 | m/s² | Acts vertically downwards along negative $Y$ |
-| CAN Bus Baud Rate | — | 921600 | bps | Serial communications speed for USB-to-CAN adapter |
-| Motor 1 (Base) Node ID | — | `0x01` | — | Base/shoulder actuator |
-| Motor 2 (Elbow) Node ID | — | `0x02` | — | Elbow/forearm actuator |
-| Host Controller Node ID | — | `0xFD` (253) | — | Master controller CAN node ID |
-| Max Actuator Torque | $\tau_{\max}$ | 17 | N·m | Hardware limit for parameter index `0x700B` |
-| Torque Constant | $K_M$ | 1.22 | N·m/Arms | RS02 torque constant |
-| Default Software Limits | — | $\pm 360^\circ$ | — | Multi-turn software limits in ArmControl |
-| Physical Hardware Limits | — | $\pm 170^\circ / \pm 150^\circ$ | — | Mechanical stops for Motor 1 and Motor 2 |
+| Gravitational Acceleration | $g$ | 9.81 | m/sÂ² | Acts vertically downwards along negative $Y$ |
+| CAN Bus Baud Rate | â€” | 921600 | bps | Serial communications speed for USB-to-CAN adapter |
+| Motor 1 (Base) Node ID | â€” | `0x01` | â€” | Base/shoulder actuator |
+| Motor 2 (Elbow) Node ID | â€” | `0x02` | â€” | Elbow/forearm actuator |
+| Host Controller Node ID | â€” | `0xFD` (253) | â€” | Master controller CAN node ID |
+| Max Actuator Torque | $\tau_{\max}$ | 17 | NÂ·m | Hardware limit for parameter index `0x700B` |
+| Torque Constant | $K_M$ | 1.22 | NÂ·m/Arms | RS02 torque constant |
+| Default Software Limits | â€” | $\pm 360^\circ$ | â€” | Multi-turn software limits in ArmControl |
+| Physical Hardware Limits | â€” | $\pm 170^\circ / \pm 150^\circ$ | â€” | Mechanical stops for Motor 1 and Motor 2 |
 
 ### Kinematic Formulas
 * **Forward Kinematics**:
@@ -141,4 +138,4 @@ To maintain a clean repository root, all source files were relocated to function
 * **`python/web/`**: Houses the Flask web dashboard (`app.py`), HTML templates, and standalone Tkinter calculator (`torque_ui.py`).
 * **`python/scratch/`**: Houses legacy template builders (`build_*.py`, `update_html.py`) and multi-agent runner scripts (`run_orchestration.py`).
 * **`matlab/scratch/`**: Houses historical scroll-bug isolation test fixtures (`test_scroll*.m`) used during `ArmMonitor` UI development.
-* **`Handover/src/`**: Self-contained snapshot containing exclusively production files (MATLAB suite, Motor Studio, Agents hub, physics engine, and hardware PDF manuals).
+* **`docs/`**: Houses system specifications, developer roadmap, environment prerequisites, and multi-agent audit reports.

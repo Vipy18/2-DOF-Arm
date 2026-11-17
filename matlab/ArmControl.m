@@ -7,7 +7,7 @@ classdef ArmControl < handle
 
     properties
         s % Serial port object
-        COM_PORT = 'COM20' % Default COM port, update upon instantiation
+        COM_PORT = 'COM3' % Default COM port, update upon instantiation
         BAUD_RATE = 921600
         MOTOR_1_ID = 1
         MOTOR_2_ID = 2
@@ -127,6 +127,38 @@ classdef ArmControl < handle
             write(obj.s, packet, "uint8");
             pause(0.1);
             disp(['Motor ', num2str(motor_id), ' Disabled.']);
+        end
+        function set_mechanical_zero(obj, motor_id)
+            % Communication Type 0x06: Set current position as mechanical zero
+            can_id = bitshift(uint32(hex2dec('06')), 24) + bitshift(uint32(obj.HOST_ID), 8) + uint32(motor_id);
+            data = zeros(1, 8, 'uint8');
+            data(1) = uint8(1);
+            packet = obj.make_packet(can_id, data);
+            write(obj.s, packet, "uint8");
+            pause(0.1);
+            disp(['Motor ', num2str(motor_id), ' Mechanical Zero Set.']);
+            obj.save_parameters(motor_id);
+        end
+
+        function set_motor_id(obj, current_id, new_id)
+            % Communication Type 0x07: Modify motor CAN ID
+            % Bit 28~24: 0x07, Bit 23~16: new CAN_ID, Bit 15~8: HOST_ID, Bit 7~0: current_id
+            can_id = bitshift(uint32(hex2dec('07')), 24) + bitshift(uint32(new_id), 16) + bitshift(uint32(obj.HOST_ID), 8) + uint32(current_id);
+            packet = obj.make_packet(can_id, zeros(1, 8, 'uint8'));
+            write(obj.s, packet, "uint8");
+            pause(0.1);
+            disp(['Motor ID changed from ', num2str(current_id), ' to ', num2str(new_id), '.']);
+            obj.save_parameters(new_id);
+        end
+
+        function save_parameters(obj, motor_id)
+            % Communication Type 0x16 (22): Save parameter table to flash
+            can_id = bitshift(uint32(hex2dec('16')), 24) + bitshift(uint32(obj.HOST_ID), 8) + uint32(motor_id);
+            data = uint8([1, 2, 3, 4, 5, 6, 7, 8]);
+            packet = obj.make_packet(can_id, data);
+            write(obj.s, packet, "uint8");
+            pause(0.1);
+            disp(['Motor ', num2str(motor_id), ' Parameters Saved to Flash.']);
         end
         
         % --- Motor Parameter Commands ---

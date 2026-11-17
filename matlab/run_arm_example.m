@@ -1,7 +1,7 @@
 % Example script to control the 2-DOF robotic arm in Position/Angle mode
 
-% Initialize arm controller on COM20 (change as needed)
-arm = ArmControl('COM20');
+% Initialize arm controller on COM3 (change as needed)
+arm = ArmControl('COM3');
 
 try
     % Connect to serial port

@@ -6,7 +6,7 @@
 %
 % Usage:
 %   1. Connect Robstride USB-to-CAN adapter to PC.
-%   2. Verify COM port setting (default: 'COM20', 921600 baud).
+%   2. Verify COM port setting (default: 'COM3', 921600 baud).
 %   3. Run this script in MATLAB Command Window:
 %          run_arm_live
 %   4. Interact with the live ArmMonitor dashboard.
@@ -38,7 +38,7 @@ if ~isempty(existing_ports)
 end
 
 %% 2. Instantiate and connect
-arm = ArmControl('COM20');  % change COM port here if different
+arm = ArmControl('COM3');  % change COM port here if different
 is_connected = false;
 
 try

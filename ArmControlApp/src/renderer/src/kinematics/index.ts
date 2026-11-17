@@ -1,5 +1,0 @@
-export * from './types'
-export * from './forward'
-export * from './inverse'
-export * from './limits'
-export * from './interpolate'
