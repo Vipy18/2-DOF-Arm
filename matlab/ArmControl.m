@@ -13,8 +13,8 @@ classdef ArmControl < handle
         MOTOR_2_ID = 2
         HOST_ID = 253 % 0xFD
         
-        L1 = 400 % Base link length (mm)
-        L2 = 300 % Fore link length (mm)
+        L1 = 233.19 % Base link length (mm)
+        L2 = 208.19 % Fore link length (mm)
         
         % Joint limits (radians)
         JOINT_LIMITS = struct('m1_min', -2*pi, 'm1_max', 2*pi, 'm2_min', -2*pi, 'm2_max', 2*pi)
